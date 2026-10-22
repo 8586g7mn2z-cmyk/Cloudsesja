@@ -1,0 +1,20 @@
+{
+  "name": "Studio Fryzur Aneta Kunc",
+  "short_name": "Aneta Kunc",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#f2ede6",
+  "theme_color": "#f2ede6",
+  "icons": [
+    {
+      "src": "assets/img/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "assets/img/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    }
+  ]
+}
