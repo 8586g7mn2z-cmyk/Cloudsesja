@@ -16,7 +16,9 @@
   const mq = (q) => window.matchMedia(q).matches;
   const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 
-  const reduce = mq('(prefers-reduced-motion: reduce)');
+  // skrypt wczytany dopiero po ponowieniach (słaby serwer): treść jest już widoczna, więc bez animacji wejścia
+  const late = !html.classList.contains('js');
+  const reduce = mq('(prefers-reduced-motion: reduce)') || late;
   const fine = mq('(hover: hover) and (pointer: fine)');
   const hasGsap = !!(window.gsap && window.ScrollTrigger);
   const hasSplit = !!window.SplitText;
@@ -44,7 +46,9 @@
   if (hasGsap && !reduce && window.Lenis) {
     lenis = new Lenis({ duration: 1.15, easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)), touchMultiplier: 1.5 });
     lenis.on('scroll', ScrollTrigger.update);
-    gsap.ticker.add((t) => lenis.raf(t * 1000));
+    // Lenis na początku klatki: najpierw przewinięcie i odczyt pozycji, potem zapisy stylów przez GSAP
+    // (bez wymuszonego przeliczania stylów w środku klatki)
+    gsap.ticker.add((t) => lenis.raf(t * 1000), false, true);
     gsap.ticker.lagSmoothing(0);
   }
 
@@ -87,7 +91,12 @@
     }
     lastY = y;
   }
-  window.addEventListener('scroll', onScroll, { passive: true });
+  // z Lenis: jedno zdarzenie na klatkę; bez Lenis: zwykłe przewijanie ograniczone do klatki
+  if (lenis) lenis.on('scroll', onScroll);
+  else {
+    let queued = false;
+    window.addEventListener('scroll', () => { if (!queued) { queued = true; requestAnimationFrame(() => { queued = false; onScroll(); }); } }, { passive: true });
+  }
   onScroll();
 
   /* ---------- Menu ---------- */
@@ -164,15 +173,47 @@
     return true;
   }
 
+  // Serwer czasem odpowiada błędem 502. Zanim przejdziemy na podstronę, sprawdzamy, czy odpowiada,
+  // i w razie potrzeby ponawiamy (przez ten czas widać zasłonę przejścia, a nie stronę błędu).
+  const http = /^https?:$/.test(location.protocol);
+  function pageReady(href) {
+    if (!http || typeof fetch !== 'function') return Promise.resolve();
+    const tries = [0, 350, 700, 1100, 1600];
+    const attempt = (i) => fetch(href, { credentials: 'same-origin' })
+      .then((r) => (r.ok || r.status === 404 || i >= tries.length - 1 ? null : Promise.reject(new Error(String(r.status)))))
+      .catch(() => (i >= tries.length - 1 ? null : new Promise((res) => setTimeout(res, tries[i + 1])).then(() => attempt(i + 1))));
+    return attempt(0);
+  }
+  // podstrona pobierana już przy najechaniu kursorem / dotknięciu, więc kliknięcie otwiera ją z pamięci przeglądarki
+  const prefetched = new Set();
+  function prefetch(a) {
+    if (!http || !isInternal(a)) return;
+    const url = a.href.split('#')[0];
+    if (prefetched.has(url)) return;
+    prefetched.add(url);
+    const l = d.createElement('link');
+    l.rel = 'prefetch';
+    l.href = url;
+    d.head.appendChild(l);
+  }
+  ['pointerenter', 'focusin', 'touchstart'].forEach((type) => d.addEventListener(type, (e) => {
+    const a = e.target instanceof Element ? e.target.closest('a[href]') : null;
+    if (a) prefetch(a);
+  }, { capture: true, passive: true }));
+
   function leave(href) {
-    if (!hasGsap || reduce) { location.href = href; return; }
+    const ready = pageReady(href);
+    if (!hasGsap || reduce) { ready.then(() => { location.href = href; }); return; }
     store.set('ak-pt', '1');
     pt.classList.add('is-active');
-    gsap.timeline({ onComplete: () => { location.href = href; } })
-      .set([ptA, ptB], { transformOrigin: '50% 100%' })
-      .to(ptA, { scaleY: 1, duration: 0.5, ease: 'expo.inOut' })
-      .to(ptB, { scaleY: 1, duration: 0.5, ease: 'expo.inOut' }, '-=0.4')
-      .to(ptMark, { opacity: 1, duration: 0.2, ease: 'power2.out' }, '-=0.2');
+    const covered = new Promise((res) => {
+      gsap.timeline({ onComplete: res })
+        .set([ptA, ptB], { transformOrigin: '50% 100%' })
+        .to(ptA, { scaleY: 1, duration: 0.5, ease: 'expo.inOut' })
+        .to(ptB, { scaleY: 1, duration: 0.5, ease: 'expo.inOut' }, '-=0.4')
+        .to(ptMark, { opacity: 1, duration: 0.2, ease: 'power2.out' }, '-=0.2');
+    });
+    Promise.all([covered, ready]).then(() => { location.href = href; });
   }
 
   d.addEventListener('click', (e) => {
@@ -235,21 +276,22 @@
     return Promise.resolve();
   }
 
-  /* ---------- Canvas: animowane pasma włosów ---------- */
-  function strands(canvas) {
+  /* ---------- Canvas: animowane pasma włosów ----------
+     Rysowanie odbywa się w osobnym wątku (OffscreenCanvas + Web Worker), więc nie konkuruje
+     z przewijaniem. Gdy przeglądarka tego nie obsługuje, ten sam kod działa w wątku głównym. */
+  function strandsCore(canvas, opts) {
     const ctx = canvas.getContext('2d');
-    if (!ctx) return;
+    if (!ctx) return null;
     let seed = 7;
     const rnd = () => { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; };
     const colors = ['#2a1d16', '#7d5434', '#b98559', '#e8c39a'];
-    let W = 0, H = 0, dpr = 1, list = [], grads = [], mask = null, running = false, visible = true, raf = 0, lastDraw = 0;
-    const mouse = { x: -9999, y: -9999, tx: -9999, ty: -9999, cx: -9999, cy: -9999 };
-    const STEPS = 22;
+    const STEPS = 20;
+    let W = 0, H = 0, list = [], grads = [], mask = null, mobile = false;
+    const mouse = { x: -9999, y: -9999, tx: -9999, ty: -9999 };
 
     function build() {
       seed = 7;
       list = [];
-      const mobile = W < 760;
       const locks = mobile ? 3 : 5;
       for (let L = 0; L < locks; L++) {
         const lock = {
@@ -277,14 +319,16 @@
           });
         }
       }
+      // pasma grupowane według gradientu: mniej zmian stanu kontekstu na klatkę
+      list.sort((a, b) => a.g - b.g);
       const mk = (stops) => { const g = ctx.createLinearGradient(0, 0, 0, H); stops.forEach(([o, c]) => g.addColorStop(o, c)); return g; };
       grads = [
         mk([[0, colors[0]], [0.55, colors[1]], [1, colors[2]]]),
         mk([[0, colors[1]], [0.6, colors[2]], [1, colors[3]]]),
         mk([[0, 'rgba(232,195,154,.15)'], [0.5, colors[3]], [1, 'rgba(232,195,154,.6)']]),
       ];
-      // maska wygaszająca pasma przy tekście (wcześniej CSS mask-image, droższa przy każdej klatce)
-      if (window.innerWidth <= 960) {
+      // maska wygaszająca pasma przy tekście
+      if (mobile) {
         mask = ctx.createLinearGradient(0, 0, 0, H);
         [[0, 0], [0.04, 0], [0.22, 1], [0.48, 1], [0.68, 0], [1, 0]].forEach(([o, a]) => mask.addColorStop(o, `rgba(0,0,0,${a})`));
       } else {
@@ -295,36 +339,34 @@
       }
     }
 
-    function resize() {
-      const r = canvas.getBoundingClientRect();
-      dpr = Math.min(window.devicePixelRatio || 1, 1.5);
-      W = r.width; H = r.height;
-      canvas.width = Math.round(W * dpr);
-      canvas.height = Math.round(H * dpr);
+    function resize(w, h, dpr, isMobile) {
+      W = w; H = h; mobile = isMobile;
+      canvas.width = Math.max(1, Math.round(W * dpr));
+      canvas.height = Math.max(1, Math.round(H * dpr));
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       build();
-      if (!running) draw(performance.now());
+    }
+
+    function pointer(x, y) {
+      mouse.tx = x; mouse.ty = y;
+      if (mouse.x < -9000) { mouse.x = x; mouse.y = y; }
     }
 
     function draw(time) {
+      if (time === undefined) time = performance.now();
       const tt = time * 0.00011;
-      if (mouse.cx > -9000) {
-        const r = canvas.getBoundingClientRect();
-        mouse.tx = mouse.cx - r.left;
-        mouse.ty = mouse.cy - r.top;
-        if (mouse.x < -9000) { mouse.x = mouse.tx; mouse.y = mouse.ty; }
-      }
       mouse.x += (mouse.tx - mouse.x) * 0.13;
       mouse.y += (mouse.ty - mouse.y) * 0.13;
       const R = Math.max(120, W * 0.11);
       const R2 = R * R;
       ctx.clearRect(0, 0, W, H);
       ctx.lineCap = 'round';
+      let g = -1;
       for (let s = 0; s < list.length; s++) {
         const st = list[s];
         const L = st.lock;
+        if (st.g !== g) { g = st.g; ctx.strokeStyle = grads[g]; }
         ctx.beginPath();
-        ctx.strokeStyle = grads[st.g];
         ctx.lineWidth = st.w;
         ctx.globalAlpha = st.a;
         let px = 0, py = 0;
@@ -357,20 +399,114 @@
       }
     }
 
-    // pasma poruszają się powoli, więc 30 klatek na sekundę wystarcza i o połowę odciąża kartę graficzną
+    // pętla: 60 kl./s, a gdy urządzenie nie nadąża, łagodnie schodzi do 30 kl./s
+    let running = false, raf = 0, last = 0, interval = 16, slow = 0;
+    const now = () => performance.now();
+    const nextFrame = (fn) => (typeof requestAnimationFrame === 'function' ? requestAnimationFrame(fn) : setTimeout(() => fn(now()), 16));
+    const cancelFrame = (id) => (typeof cancelAnimationFrame === 'function' ? cancelAnimationFrame(id) : clearTimeout(id));
     function loop(time) {
-      if (time - lastDraw > 30) { lastDraw = time; draw(time); }
-      raf = requestAnimationFrame(loop);
+      if (!running) return;
+      if (time - last >= interval - 1) {
+        last = time;
+        const t0 = now();
+        draw(time);
+        const cost = now() - t0;
+        slow = cost > 9 ? Math.min(slow + 1, 30) : Math.max(slow - 1, 0);
+        interval = slow > 8 ? 33 : 16;
+      }
+      raf = nextFrame(loop);
     }
-    function start() { if (running || reduce || !visible || d.hidden) return; running = true; raf = requestAnimationFrame(loop); }
-    function stop() { running = false; cancelAnimationFrame(raf); }
+    function run(on) {
+      if (on === running) return;
+      running = on;
+      if (on) raf = nextFrame(loop);
+      else cancelFrame(raf);
+    }
+    return { resize, pointer, draw, run, opts };
+  }
 
-    new ResizeObserver(() => resize()).observe(canvas);
-    new IntersectionObserver(([en]) => { visible = en.isIntersecting; visible ? start() : stop(); }).observe(canvas);
-    d.addEventListener('visibilitychange', () => (d.hidden ? stop() : start()));
-    window.addEventListener('pointermove', (e) => { mouse.cx = e.clientX; mouse.cy = e.clientY; }, { passive: true });
+  function strands(canvas) {
+    let visible = false;
+    let api = null;
+    let worker = null;
+    const dprFor = () => Math.min(window.devicePixelRatio || 1, window.innerWidth <= 960 ? 1.25 : 1.5);
+    const send = (msg) => {
+      if (starting) {
+        // z kolejki zostaje tylko ostatni stan danego typu
+        const i = queue0.findIndex((m) => m.t === msg.t);
+        if (i >= 0) queue0.splice(i, 1);
+        queue0.push(msg);
+        return;
+      }
+      if (worker) worker.postMessage(msg);
+      else if (api && api[msg.t]) api[msg.t](...msg.a);
+    };
+
+    const useMain = () => { if (!api) api = strandsCore(canvas, {}); return !!api; };
+    const queue0 = [];
+    const send0 = send;
+    // wątek roboczy z OffscreenCanvas: płótno przekazujemy dopiero, gdy wątek potwierdzi gotowość;
+    // jeśli się nie uruchomi (np. strona otwarta z dysku), pasma rysuje wątek główny
+    const offscreen = !reduce && location.protocol !== 'file:' && 'transferControlToOffscreen' in canvas && typeof Worker === 'function' && typeof OffscreenCanvas === 'function';
+    let starting = offscreen;
+    if (offscreen) {
+      try {
+        const src = `const strandsCore = ${strandsCore.toString()};
+          let api = null;
+          onmessage = (e) => {
+            const m = e.data;
+            if (m.t === 'init') { api = strandsCore(m.canvas, {}); return; }
+            if (api && api[m.t]) api[m.t](...m.a);
+          };
+          postMessage('ready');`;
+        const url = URL.createObjectURL(new Blob([src], { type: 'text/javascript' }));
+        const w = new Worker(url);
+        const fallback = setTimeout(() => { if (starting) { starting = false; w.terminate(); if (useMain()) queue0.splice(0).forEach(send0); } }, 1500);
+        w.onerror = () => { if (starting) { clearTimeout(fallback); starting = false; w.terminate(); if (useMain()) queue0.splice(0).forEach(send0); } };
+        w.onmessage = (e) => {
+          if (e.data !== 'ready' || !starting) return;
+          clearTimeout(fallback);
+          starting = false;
+          worker = w;
+          const off = canvas.transferControlToOffscreen();
+          w.postMessage({ t: 'init', canvas: off }, [off]);
+          queue0.splice(0).forEach(send0);
+          URL.revokeObjectURL(url);
+        };
+      } catch (e) {
+        starting = false;
+      }
+    }
+    if (!starting && !useMain()) return;
+
+    const resize = () => {
+      const r = canvas.getBoundingClientRect();
+      if (!r.width || !r.height) return;
+      send({ t: 'resize', a: [r.width, r.height, dprFor(), window.innerWidth <= 960] });
+      if (!visible || reduce) send({ t: 'draw', a: [] });
+    };
+    const setRun = () => send({ t: 'run', a: [visible && !reduce && !d.hidden] });
+
+    // pozycja kursora względem płótna, bez odczytów układu strony w trakcie przewijania
+    let top0 = 0, scroll0 = 0, cx = -9999, cy = -9999, pending = false;
+    const post = () => {
+      pending = false;
+      if (cx < -9000) return;
+      send({ t: 'pointer', a: [cx, cy - (top0 - (window.scrollY - scroll0))] });
+    };
+    const queue = () => { if (!pending && visible) { pending = true; requestAnimationFrame(post); } };
+    window.addEventListener('pointermove', (e) => {
+      if (!visible) return;
+      cx = e.clientX; cy = e.clientY;
+      top0 = canvas.getBoundingClientRect().top; scroll0 = window.scrollY;
+      queue();
+    }, { passive: true });
+    if (lenis) lenis.on('scroll', queue); else window.addEventListener('scroll', queue, { passive: true });
+
+    new ResizeObserver(resize).observe(canvas);
+    new IntersectionObserver(([en]) => { visible = en.isIntersecting; setRun(); }, { rootMargin: '0px 0px -8% 0px' }).observe(canvas);
+    d.addEventListener('visibilitychange', setRun);
     resize();
-    start();
   }
   $$('[data-strands]').forEach(strands);
 
@@ -425,35 +561,52 @@
     });
   }
 
-  // „cięcie nożycami”: ostrze przecina kadr w poprzek, potem kadr rozchyla się od strony bliższej krawędzi ekranu
+  // „cięcie nożycami”: ostrze przecina kadr w poprzek, potem kadr rozchyla się od strony bliższej krawędzi ekranu.
+  // Natywne Web Animations (bez przeliczania w JS w każdej klatce); kształt wielokąta jest identyczny jak wcześniej.
+  const EXPO_IN_OUT = 'cubic-bezier(0.87, 0, 0.13, 1)';
+  const EXPO_OUT = 'cubic-bezier(0.16, 1, 0.3, 1)';
   function mediaReveals() {
+    const canAnimate = typeof Element.prototype.animate === 'function';
     $$('[data-reveal]').forEach((el) => {
       const img = $('img', el);
-      const blade = d.createElement('i');
-      blade.className = 'cut-blade';
-      el.appendChild(blade);
       const r = el.getBoundingClientRect();
       const flip = r.left + r.width / 2 > window.innerWidth / 2;
       const fx = (x) => (flip ? 100 - x : x);
       const P = -25; // oś nożyc leży poza kadrem
-      const cut = { x: 0, s: 0.012 };
-      const paint = () => {
-        const a = cut.s * -P;
-        const b = cut.s * (cut.x - P);
-        el.style.clipPath = `polygon(${fx(0)}% ${50 - a}%, ${fx(cut.x)}% ${50 - b}%, ${fx(cut.x)}% ${50 + b}%, ${fx(0)}% ${50 + a}%)`;
+      const poly = (x, sc) => {
+        const a = sc * -P;
+        const b = sc * (x - P);
+        return `polygon(${fx(0)}% ${50 - a}%, ${fx(x)}% ${50 - b}%, ${fx(x)}% ${50 + b}%, ${fx(0)}% ${50 + a}%)`;
       };
-      paint();
-      gsap.set(blade, { scaleX: 0, transformOrigin: flip ? '100% 50%' : '0% 50%' });
-      const tl = gsap.timeline({ scrollTrigger: { trigger: el, start: 'top 90%', once: true }, onComplete: () => { el.style.clipPath = 'none'; blade.remove(); } })
-        .to(cut, { x: 100, duration: 0.75, ease: 'expo.inOut', onUpdate: paint })
-        .to(blade, { scaleX: 1, duration: 0.75, ease: 'expo.inOut' }, 0)
-        .to(cut, { s: 2.1, duration: 1.6, ease: 'expo.out', onUpdate: paint }, '-=0.08')
-        .to(blade, { opacity: 0, duration: 0.5, ease: 'power2.out' }, '<');
-      if (img) {
-        gsap.set(img, { transition: 'none' });
-        tl.fromTo(img, { scale: 1.3 }, { scale: 1, duration: 1.9, ease: 'expo.out', onComplete: () => gsap.set(img, { clearProps: 'transform,transition,scale' }) }, 0.6);
-      }
-      el._reveal = tl;
+      let blade = null;
+      let anims = [];
+      let done = false;
+      const finish = () => {
+        if (done) return;
+        done = true;
+        anims.forEach((a) => a.cancel());
+        anims = [];
+        el.style.clipPath = 'none';
+        if (blade) blade.remove();
+      };
+      if (!canAnimate) { el._reveal = { progress: finish }; ScrollTrigger.create({ trigger: el, start: 'top 90%', once: true, onEnter: finish }); return; }
+      el.style.clipPath = poly(0, 0.012);
+      const run = () => {
+        if (done) return;
+        blade = d.createElement('i');
+        blade.className = 'cut-blade';
+        blade.style.transformOrigin = flip ? '100% 50%' : '0% 50%';
+        el.appendChild(blade);
+        const cut = el.animate([{ clipPath: poly(0, 0.012) }, { clipPath: poly(100, 0.012) }], { duration: 750, easing: EXPO_IN_OUT, fill: 'forwards' });
+        const open = el.animate([{ clipPath: poly(100, 0.012) }, { clipPath: poly(100, 2.1) }], { duration: 1600, delay: 670, easing: EXPO_OUT, fill: 'both' });
+        const bladeIn = blade.animate([{ transform: 'scaleX(0)' }, { transform: 'scaleX(1)' }], { duration: 750, easing: EXPO_IN_OUT, fill: 'forwards' });
+        const bladeOut = blade.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 500, delay: 670, easing: 'ease-out', fill: 'forwards' });
+        anims = [cut, open, bladeIn, bladeOut];
+        if (img) anims.push(img.animate([{ transform: 'scale(1.3)' }, { transform: 'scale(1)' }], { duration: 1900, delay: 600, easing: EXPO_OUT, fill: 'backwards' }));
+        open.finished.then(finish, () => {});
+      };
+      const st = ScrollTrigger.create({ trigger: el, start: 'top 90%', once: true, onEnter: run });
+      el._reveal = { progress: () => { st.kill(); finish(); } };
     });
   }
 
@@ -496,23 +649,29 @@
   function marquees() {
     $$('[data-marquee]').forEach((m) => {
       const track = $('.marquee__track', m);
-      const tween = gsap.to(track, { xPercent: -50, duration: 30, ease: 'none', repeat: -1 });
+      const tween = gsap.to(track, { xPercent: -50, duration: 30, ease: 'none', repeat: -1, paused: true });
       tween.totalTime(tween.duration() * 500);
       let boost = 0;
       let dir = 1;
-      ScrollTrigger.create({
-        trigger: m, start: 'top bottom', end: 'bottom top',
-        onUpdate: (self) => { dir = self.direction; boost = clamp(Math.abs(self.getVelocity()) / 260, 0, 6); },
-        onToggle: (self) => (self.isActive ? tween.resume() : tween.pause()),
-      });
-      // przy szybkim przewijaniu napisy pochylają się w stronę ruchu
+      // przy szybkim przewijaniu napisy pochylają się w stronę ruchu; zapis tylko, gdy wartość się zmienia
       const skew = gsap.quickSetter(track, 'skewX', 'deg');
       let lean = 0;
-      gsap.ticker.add(() => {
+      let lastSkew = 0;
+      const tick = () => {
         boost *= 0.93;
         tween.timeScale(dir * (1 + boost));
         lean += (-dir * boost * 1.4 - lean) * 0.12;
-        skew(Math.abs(lean) < 0.01 ? 0 : lean);
+        const v = Math.abs(lean) < 0.01 ? 0 : Math.round(lean * 100) / 100;
+        if (v !== lastSkew) { lastSkew = v; skew(v); }
+      };
+      ScrollTrigger.create({
+        trigger: m, start: 'top bottom', end: 'bottom top',
+        onUpdate: (self) => { dir = self.direction; boost = clamp(Math.abs(self.getVelocity()) / 260, 0, 6); },
+        // poza ekranem pasek nie pracuje wcale (ani przesuw, ani pętla ticker, ani obrót gwiazdek)
+        onToggle: (self) => {
+          m.classList.toggle('is-active', self.isActive);
+          if (self.isActive) { tween.resume(); gsap.ticker.add(tick); } else { tween.pause(); gsap.ticker.remove(tick); }
+        },
       });
     });
   }
@@ -524,14 +683,18 @@
   }
 
   function headerTheme() {
-    const sections = $$('[data-theme-section="dark"]');
-    const update = () => {
-      const probe = hdrH() / 2;
-      const dark = sections.some((s) => { const r = s.getBoundingClientRect(); return r.top <= probe && r.bottom >= probe; });
-      hdr && hdr.classList.toggle('is-dark', dark);
-    };
-    ScrollTrigger.create({ start: 0, end: 'max', onUpdate: update, onRefresh: update });
+    // progi wyliczane przy odświeżeniu ScrollTrigger, bez mierzenia sekcji w każdej klatce
+    const probe = () => hdrH() / 2;
+    let sts = [];
+    const update = () => hdr && hdr.classList.toggle('is-dark', sts.some((t) => t.isActive));
+    sts = $$('[data-theme-section="dark"]').map((s) => ScrollTrigger.create({
+      trigger: s,
+      start: () => `top top+=${probe()}`,
+      end: () => `bottom top+=${probe()}`,
+      onToggle: update,
+    }));
     update();
+    ScrollTrigger.addEventListener('refresh', update);
   }
 
   function hscroll() {
@@ -816,7 +979,7 @@
     if (!fine) return;
     const targets = $$('.tone, .person, .g-item__btn');
     if (!targets.length) return;
-    d.body.insertAdjacentHTML('beforeend', '<svg class="fx-defs" aria-hidden="true" focusable="false"><filter id="ak-wave" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB"><feTurbulence type="fractalNoise" baseFrequency="0.003 0.012" numOctaves="2" seed="7" result="n"/><feColorMatrix in="n" values="1 0 0 0 0  0 0 0 0 .5  0 0 0 0 0  0 0 0 0 1" result="m"/><feDisplacementMap in="SourceGraphic" in2="m" scale="0" xChannelSelector="R" yChannelSelector="G"/></filter></svg>');
+    d.body.insertAdjacentHTML('beforeend', '<svg class="fx-defs" aria-hidden="true" focusable="false"><filter id="ak-wave" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB"><feTurbulence type="fractalNoise" baseFrequency="0.003 0.012" numOctaves="1" seed="7" result="n"/><feColorMatrix in="n" values="1 0 0 0 0  0 0 0 0 .5  0 0 0 0 0  0 0 0 0 1" result="m"/><feDisplacementMap in="SourceGraphic" in2="m" scale="0" xChannelSelector="R" yChannelSelector="G"/></filter></svg>');
     const turb = $('#ak-wave feTurbulence');
     const disp = $('#ak-wave feDisplacementMap');
     let current = null;
@@ -911,14 +1074,16 @@
       if (tabsEl.scrollWidth > tabsEl.clientWidth) tabsEl.scrollTo({ left: t.offsetLeft - 16, behavior: 'smooth' });
     };
     const cats = $$('[data-price-cat]');
-    const pick = () => {
-      const line = window.innerHeight * 0.55;
-      let id = cats[0].id;
-      cats.forEach((c) => { if (c.getBoundingClientRect().top < line) id = c.id; });
-      setActive(id);
-    };
-    ScrollTrigger.create({ start: 0, end: 'max', onUpdate: pick, onRefresh: pick });
-    pick();
+    if (!cats.length) return;
+    // aktywna kategoria przełączana na progach (bez odczytów układu strony przy każdym przewinięciu)
+    cats.forEach((c, i) => ScrollTrigger.create({
+      trigger: c,
+      start: 'top 55%',
+      end: 'bottom 55%',
+      onToggle: (st) => { if (st.isActive) setActive(c.id); },
+      onLeaveBack: i === 0 ? () => setActive(c.id) : undefined,
+    }));
+    setActive(cats[0].id);
     window.addEventListener('resize', () => { const c = current; current = ''; setActive(c); });
   }
 
@@ -1287,11 +1452,34 @@
 
   const fontsReady = d.fonts && d.fonts.ready ? Promise.race([d.fonts.ready, new Promise((r) => setTimeout(r, 1800))]) : Promise.resolve();
 
+  /* ---------- Fonty: gdy serwer nie oddał pliku (np. błąd 502), wczytujemy go ponownie ---------- */
+  const fontPending = new WeakSet();
+  function fontRetry(n = 1) {
+    if (!http || !d.fonts || typeof FontFace !== 'function' || n > 6) return;
+    const failed = [];
+    d.fonts.forEach((f) => { if (f.status === 'error' && /Geist/.test(f.family) && !fontPending.has(f)) { fontPending.add(f); failed.push(f); } });
+    if (!failed.length) return;
+    const css = $('link[href*="assets/css/main.css"]');
+    const base = css ? css.href.replace(/css\/main\.css.*$/, 'fonts/') : 'assets/fonts/';
+    const files = { latin: 'geist-latin-wght-normal', ext: 'geist-latin-ext-wght-normal' };
+    setTimeout(() => {
+      failed.forEach((f) => {
+        const file = /U\+0+-0*FF/i.test(f.unicodeRange) ? files.latin : files.ext;
+        const face = new FontFace(f.family.replace(/["']/g, ''), `url(${base}${file}.woff2?r=${n}) format('woff2')`, { weight: f.weight, style: f.style, unicodeRange: f.unicodeRange, display: 'swap' });
+        d.fonts.add(face);
+        face.load().then(() => { try { d.fonts.delete(f); } catch (e) { /* nic */ } if (hasGsap) ScrollTrigger.refresh(); }, () => { try { d.fonts.delete(face); } catch (e) { /* nic */ } fontPending.delete(f); fontRetry(n + 1); });
+      });
+    }, Math.min(400 * n, 2000));
+  }
+
   fontsReady.then(() => {
     const intro = html.classList.contains('is-entering') ? enterTransition() : preloader();
     if (!html.classList.contains('is-entering')) store.del('ak-pt');
     return intro;
   }).then(() => {
+    fontRetry();
+    // błąd fontu może przyjść także później (wolny serwer), wtedy ponawiamy od razu
+    if (d.fonts && d.fonts.addEventListener) d.fonts.addEventListener('loadingerror', () => fontRetry());
     initScroll();
     gallery();
     contactForm();

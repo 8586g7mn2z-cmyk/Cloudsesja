@@ -1,13 +1,13 @@
 {
   "name": "anetakunc-redesign",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "private": true,
-  "description": "Redesign strony Studio Fryzur Aneta Kunc (anetakunc.pl) — statyczna strona z animacjami GSAP + Lenis.",
+  "description": "Strona Studio Fryzur Aneta Kunc (anetakunc.pl): statyczny HTML/CSS/JS z animacjami GSAP + Lenis.",
   "type": "module",
   "scripts": {
-    "build": "node build/build.mjs",
-    "dev": "node build/build.mjs && node build/serve.mjs",
-    "serve": "node build/serve.mjs"
+    "bundle": "node scripts/bundle.mjs",
+    "serve": "node scripts/serve.mjs",
+    "dev": "node scripts/bundle.mjs && node scripts/serve.mjs"
   },
   "engines": {
     "node": ">=18"

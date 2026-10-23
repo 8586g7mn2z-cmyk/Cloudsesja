@@ -277,8 +277,10 @@ a:hover .roll__in, button:hover .roll__in { transform: translateY(-100%); }
 .marquee__row { display: flex; align-items: center; flex-shrink: 0; }
 .marquee__item { font: 500 clamp(2.07rem, 4.74vw, 4.88rem)/1.05 var(--f-sans); letter-spacing: -.02em; padding: 0 .32em; white-space: nowrap; }
 .marquee__item em { color: var(--accent); }
-.marquee__sep { display: grid; place-items: center; color: var(--accent); }
-.ico-ast { width: clamp(22px, 2.6vw, 42px); height: auto; animation: spin 14s linear infinite; }
+.marquee__sep { display: grid; place-items: center; color: var(--accent); animation: spin 14s linear infinite; }
+/* obrót na elemencie HTML (kompozytor), a nie na <svg> (przemalowanie dokumentu w każdej klatce); poza ekranem pauza */
+.js .marquee:not(.is-active) .marquee__sep { animation-play-state: paused; }
+.ico-ast { width: clamp(22px, 2.6vw, 42px); height: auto; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
 /* ---------- SECTION HEAD ---------- */
