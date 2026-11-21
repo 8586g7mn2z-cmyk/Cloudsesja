@@ -316,6 +316,10 @@ async function main() {
         op,
       ),
     );
+    if (progress === 100) {
+      const t = db.get<any>('SELECT end_at FROM tasks WHERE id = ?', taskIds[taskIds.length - 1])!;
+      db.run('UPDATE tasks SET done_at = ? WHERE id = ?', rnd() < 0.8 ? t.end_at : addMinutesIso(t.end_at, int(60, 4000)), taskIds[taskIds.length - 1]);
+    }
   }
   // ewidencja czasu
   db.tx(() => {

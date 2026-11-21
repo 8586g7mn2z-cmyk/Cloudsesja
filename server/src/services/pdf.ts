@@ -257,13 +257,13 @@ export async function templatePdf(ctx: Ctx, body: string, items: DocItem[]): Pro
       if (items.length) {
         const cols: ReportColumn[] = [
           { key: 'lp', label: 'Lp.', type: 'int', width: 0.5 },
-          { key: 'name', label: 'Nazwa', width: 4 },
+          { key: 'name', label: 'Nazwa', width: 3.4 },
           { key: 'qty', label: 'Ilość', type: 'number', width: 0.8 },
           { key: 'unit', label: 'J.m.', width: 0.6 },
           { key: 'net_price', label: 'Cena netto', type: 'money', width: 1.3 },
           { key: 'vat', label: 'VAT', width: 0.6 },
-          { key: 'net_value', label: 'Wartość netto', type: 'money', width: 1.4 },
-          { key: 'gross_value', label: 'Wartość brutto', type: 'money', width: 1.4 },
+          { key: 'net_value', label: 'Wart. netto', type: 'money', width: 1.6 },
+          { key: 'gross_value', label: 'Wart. brutto', type: 'money', width: 1.6 },
         ];
         const rows = items.map((it, i) => ({ ...it, lp: i + 1, vat: `${it.vat_rate}%` }));
         const totals = {

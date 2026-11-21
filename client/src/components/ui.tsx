@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { X, AlertTriangle, Info, CheckCircle2 } from 'lucide-react';
+import { X, AlertTriangle, Info, CheckCircle2, Calendar as CalendarIcon } from 'lucide-react';
 import { activeDict, useApp } from '../lib/store';
 
 // ---------- Okno dialogowe ----------
+const modalStack: object[] = [];
 export function Modal({
   title,
   onClose,
@@ -23,9 +24,35 @@ export function Modal({
   className?: string;
 }) {
   const ref = useRef<HTMLFormElement>(null);
+  const closeRef = useRef(onClose);
+  closeRef.current = onClose;
+  // fokus w pierwszym polu (także gdy treść okna wczyta się później)
+  const focused = useRef(false);
   useEffect(() => {
-    const el = ref.current?.querySelector<HTMLElement>('input:not([type=hidden]):not([disabled]):not([readonly]), select:not([disabled]), textarea');
-    el?.focus();
+    const m = ref.current;
+    if (!m || focused.current) return;
+    if (m.contains(document.activeElement)) return void (focused.current = true);
+    const el = m.querySelector<HTMLElement>('.modal-body input:not([type=hidden]):not([disabled]):not([readonly]), .modal-body select:not([disabled]), .modal-body textarea:not([disabled])');
+    if (el) {
+      el.focus();
+      focused.current = true;
+    }
+  });
+  // Esc zamyka najwyżej położone okno, niezależnie od tego, gdzie jest fokus
+  useEffect(() => {
+    const me = {};
+    modalStack.push(me);
+    const h = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && modalStack[modalStack.length - 1] === me && !e.defaultPrevented) {
+        e.preventDefault();
+        closeRef.current();
+      }
+    };
+    document.addEventListener('keydown', h);
+    return () => {
+      document.removeEventListener('keydown', h);
+      modalStack.splice(modalStack.indexOf(me), 1);
+    };
   }, []);
   return (
     <div className="overlay" onMouseDown={onClose}>
@@ -39,10 +66,6 @@ export function Modal({
           onSubmit?.();
         }}
         onKeyDown={(e) => {
-          if (e.key === 'Escape') {
-            e.stopPropagation();
-            onClose();
-          }
           if (e.key === 'Enter' && (e.ctrlKey || e.metaKey) && onSubmit) {
             e.preventDefault();
             onSubmit();
@@ -104,7 +127,96 @@ export function Lbl({ children, req, htmlFor }: { children: ReactNode; req?: boo
 
 type InputProps = React.InputHTMLAttributes<HTMLInputElement> & { invalid?: boolean };
 export function Input({ invalid, className, ...p }: InputProps) {
+  if (p.type === 'date' || p.type === 'time' || p.type === 'datetime-local') return <DateTimeInput {...p} invalid={invalid} className={className} />;
   return <input {...p} value={p.value ?? ''} className={`input ${invalid ? 'invalid' : ''} ${className ?? ''}`} />;
+}
+
+const pad2 = (n: number) => String(n).padStart(2, '0');
+const isoToPl = (iso: string) => (/^\d{4}-\d{2}-\d{2}/.test(iso) ? `${iso.slice(8, 10)}.${iso.slice(5, 7)}.${iso.slice(0, 4)}` : '');
+function plToIso(t: string): string | null {
+  const m = /^(\d{1,2})[.\-/ ](\d{1,2})[.\-/ ](\d{4})$/.exec(t.trim());
+  if (!m) return null;
+  const d = new Date(+m[3], +m[2] - 1, +m[1]);
+  if (d.getDate() !== +m[1] || d.getMonth() !== +m[2] - 1) return null;
+  return `${m[3]}-${pad2(+m[2])}-${pad2(+m[1])}`;
+}
+function normTime(t: string): string | null {
+  const m = /^(\d{1,2})[:.]?(\d{2})$/.exec(t.trim());
+  if (!m || +m[1] > 23 || +m[2] > 59) return null;
+  return `${pad2(+m[1])}:${m[2]}`;
+}
+
+/** Pole daty (DD.MM.RRRR) i godziny (GG:MM, 24 h) niezależne od języka przeglądarki. */
+function DateTimeInput({ type, value, onChange, invalid, className, style, id, disabled, readOnly, ...rest }: InputProps) {
+  const v = String(value ?? '');
+  const datePart = type === 'time' ? '' : v.slice(0, 10);
+  const timePart = type === 'date' ? '' : type === 'time' ? v.slice(0, 5) : v.slice(11, 16);
+  const [dText, setDText] = useState(isoToPl(datePart));
+  const [tText, setTText] = useState(timePart);
+  const picker = useRef<HTMLInputElement>(null);
+  useEffect(() => setDText(isoToPl(datePart)), [datePart]);
+  useEffect(() => setTText(timePart), [timePart]);
+  const emit = (d: string, t: string) => {
+    const val = type === 'date' ? d : type === 'time' ? t : d && t ? `${d}T${t}` : '';
+    onChange?.({ target: { value: val } } as any);
+  };
+  const dBad = dText !== '' && plToIso(dText) === null;
+  const tBad = tText !== '' && normTime(tText) === null;
+  const dateField = (
+    <span style={{ position: 'relative', display: 'inline-flex', flex: type === 'datetime-local' ? '1 1 auto' : '1 1 auto', minWidth: 0 }}>
+      <input
+        {...rest}
+        id={id}
+        disabled={disabled}
+        readOnly={readOnly}
+        className={`input ${invalid || dBad ? 'invalid' : ''}`}
+        placeholder="DD.MM.RRRR"
+        value={dText}
+        inputMode="numeric"
+        style={{ paddingRight: 24 }}
+        onChange={(e) => {
+          setDText(e.target.value);
+          const iso = plToIso(e.target.value);
+          if (iso) emit(iso, normTime(tText) ?? (tText || '09:00'));
+          else if (e.target.value === '') emit('', normTime(tText) ?? '');
+        }}
+        onBlur={() => setDText(isoToPl(plToIso(dText) ?? datePart))}
+      />
+      {!disabled && !readOnly && (
+        <button type="button" tabIndex={-1} title="Wybierz z kalendarza" onClick={() => (picker.current as any)?.showPicker?.()} style={{ position: 'absolute', right: 2, top: 3, bottom: 3, border: 0, background: 'none', cursor: 'pointer', color: 'var(--text-3)', padding: '0 4px' }}>
+          <CalendarIcon size={13} />
+        </button>
+      )}
+      <input ref={picker} type="date" tabIndex={-1} aria-hidden value={datePart} onChange={(e) => e.target.value && emit(e.target.value, normTime(tText) ?? (tText || '09:00'))} style={{ position: 'absolute', left: 0, bottom: 0, width: 1, height: 1, opacity: 0, pointerEvents: 'none' }} />
+    </span>
+  );
+  const timeField = (
+    <input
+      id={type === 'time' ? id : undefined}
+      disabled={disabled}
+      readOnly={readOnly}
+      className={`input ${invalid || tBad ? 'invalid' : ''}`}
+      placeholder="GG:MM"
+      value={tText}
+      inputMode="numeric"
+      style={type === 'time' ? undefined : { width: 70, flex: '0 0 70px' }}
+      aria-label={type === 'datetime-local' ? 'Godzina' : (rest as any)['aria-label']}
+      onChange={(e) => {
+        setTText(e.target.value);
+        const t = normTime(e.target.value);
+        if (t) emit(type === 'time' ? '' : plToIso(dText) ?? datePart, t);
+      }}
+      onBlur={() => setTText(normTime(tText) ?? timePart)}
+    />
+  );
+  if (type === 'time') return <span className={className} style={{ display: 'inline-flex', width: '100%', ...style }}>{timeField}</span>;
+  if (type === 'date') return <span className={className} style={{ display: 'inline-flex', width: '100%', ...style }}>{dateField}</span>;
+  return (
+    <span className={className} style={{ display: 'inline-flex', gap: 4, width: '100%', ...style }}>
+      {dateField}
+      {timeField}
+    </span>
+  );
 }
 export function Textarea(p: React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
   return <textarea {...p} value={p.value ?? ''} className={`textarea ${p.className ?? ''}`} />;
@@ -239,6 +351,7 @@ export function Combo({ items, value, onChange, placeholder = 'wpisz, aby wyszuk
               onChange(list[hi].id);
               setQ(null);
             } else if (e.key === 'Escape' && q !== null) {
+              e.preventDefault();
               e.stopPropagation();
               setQ(null);
             }

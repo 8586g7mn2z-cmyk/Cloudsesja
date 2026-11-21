@@ -222,7 +222,7 @@ function taskStats(ctx: Ctx, u: User, p: ReportParams): ReportResult {
       { key: 'done', label: 'Wykonane', type: 'int' },
       { key: 'on_time', label: 'W terminie', type: 'int' },
       { key: 'open', label: 'W toku', type: 'int' },
-      { key: 'overdue', label: 'Przeterminowane', type: 'int' },
+      { key: 'overdue', label: 'Przeterminowane', type: 'int', width: 1.4 },
       { key: 'cancelled', label: 'Anulowane', type: 'int' },
       { key: 'avg_progress', label: 'Śr. postęp', type: 'percent' },
       { key: 'rate', label: 'Wykonanie', type: 'percent' },

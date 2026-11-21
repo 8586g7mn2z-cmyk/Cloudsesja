@@ -1,0 +1,19 @@
+services:
+  diagnos-crm:
+    build: .
+    image: diagnos-crm:latest
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      TZ: Europe/Warsaw
+      # Klucz szyfrujący hasła SMTP i klucze bramki SMS w bazie. Ustaw własną, długą wartość
+      # (np. w pliku .env obok tego pliku). Bez niej klucz zostanie wygenerowany w /data/secret.key.
+      DIAGNOS_SECRET: ${DIAGNOS_SECRET:-}
+      # Ustaw na 1, gdy aplikacja działa za serwerem HTTPS (ciasteczko sesji tylko przez HTTPS).
+      DIAGNOS_COOKIE_SECURE: ${DIAGNOS_COOKIE_SECURE:-0}
+    volumes:
+      - diagnos-data:/data
+
+volumes:
+  diagnos-data:
