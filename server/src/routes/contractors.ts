@@ -4,7 +4,8 @@ import type { Ctx } from '../context.js';
 import { isManager, requireUser, type User } from '../auth.js';
 import { audit, bad, forbidden, isValidEmail, isValidNip, isValidRegon, normalizeNip, notFound, nowIso, str, toInt, toNum, HttpError } from '../util.js';
 import { fireEvent } from '../services/tasks.js';
-import { contentDisposition, extOf, filePath, getFile, saveFile } from '../services/files.js';
+import { canSeeTask } from './tasks.js';
+import { extOf, fileHeaders, filePath, getFile, purgeFileIfUnused, saveFile } from '../services/files.js';
 import { documentLevel, documentLevels, logDocument } from '../services/docperms.js';
 import { readUpload } from './core.js';
 
@@ -18,10 +19,11 @@ const ID_FIELDS = new Set(['type_id', 'status_id', 'group_id', 'subgroup_id', 'p
 export const OWNER_TYPES = new Set(['contractor', 'correspondence', 'project', 'task', 'order']);
 
 /** Czy użytkownik ma dostęp do obiektu, do którego należy załącznik. */
-function ownerExists(ctx: Ctx, type: string, id: number) {
+function ownerExists(ctx: Ctx, u: User, type: string, id: number) {
   const table = { contractor: 'contractors', correspondence: 'correspondence', project: 'projects', task: 'tasks', order: 'orders' }[type];
   if (!table) throw bad('Nieznany typ obiektu.');
   if (!ctx.db.get(`SELECT id FROM ${table} WHERE id = ?`, id)) throw notFound();
+  if (type === 'task' && !canSeeTask(ctx, u, id)) throw forbidden('Nie masz dostępu do tego zadania.');
 }
 
 export function contractorList(ctx: Ctx, opts: { includeInactive?: boolean; ids?: number[] } = {}) {
@@ -316,13 +318,13 @@ export async function contractorRoutes(app: FastifyInstance, ctx: Ctx) {
   app.get('/api/attachments/:type/:id', async (req) => {
     const u = requireUser(req);
     const { type, id } = req.params as any;
-    ownerExists(ctx, type, Number(id));
+    ownerExists(ctx, u, type, Number(id));
     return attachmentsFor(ctx, u, type, Number(id));
   });
   app.post('/api/attachments/:type/:id', async (req) => {
     const u = requireUser(req);
     const { type, id } = req.params as any;
-    ownerExists(ctx, type, Number(id));
+    ownerExists(ctx, u, type, Number(id));
     const { files } = await readUpload(req);
     if (!files.length) throw bad('Wybierz plik do dodania.');
     const ids = db.tx(() =>
@@ -337,7 +339,7 @@ export async function contractorRoutes(app: FastifyInstance, ctx: Ctx) {
   app.post('/api/attachments/:type/:id/from-document', async (req) => {
     const u = requireUser(req);
     const { type, id } = req.params as any;
-    ownerExists(ctx, type, Number(id));
+    ownerExists(ctx, u, type, Number(id));
     const docId = toInt((req.body as any)?.document_id);
     const doc = db.get<any>('SELECT * FROM documents WHERE id = ?', docId);
     if (!doc) throw notFound('Dokument nie istnieje.');
@@ -351,6 +353,7 @@ export async function contractorRoutes(app: FastifyInstance, ctx: Ctx) {
     const u = requireUser(req);
     const a = db.get<any>('SELECT * FROM attachments WHERE id = ?', Number((req.params as any).id));
     if (!a) throw notFound();
+    if (a.owner_type === 'task' && !canSeeTask(ctx, u, a.owner_id)) throw forbidden('Nie masz dostępu do tego zadania.');
     if (a.source_document_id) {
       const doc = db.get<any>('SELECT * FROM documents WHERE id = ?', a.source_document_id);
       if (doc && documentLevel(ctx, u, doc) === 'none') throw forbidden('Brak uprawnień do dokumentu źródłowego.');
@@ -358,8 +361,7 @@ export async function contractorRoutes(app: FastifyInstance, ctx: Ctx) {
     }
     const f = getFile(ctx, a.file_id)!;
     const inline = (req.query as any).inline === '1';
-    reply.header('Content-Type', f.mime ?? 'application/octet-stream');
-    reply.header('Content-Disposition', contentDisposition(f.original_name, inline));
+    fileHeaders(reply, f, inline);
     return reply.send(fs.createReadStream(filePath(ctx, f)));
   });
   app.delete('/api/attachments/:id', async (req) => {
@@ -367,7 +369,10 @@ export async function contractorRoutes(app: FastifyInstance, ctx: Ctx) {
     const a = db.get<any>('SELECT * FROM attachments WHERE id = ?', Number((req.params as any).id));
     if (!a) throw notFound();
     if (a.created_by !== u.id && !isManager(u)) throw forbidden('Usunąć załącznik może jego autor, kierownik lub administrator.');
-    db.run('DELETE FROM attachments WHERE id = ?', a.id);
+    db.tx(() => {
+      db.run('DELETE FROM attachments WHERE id = ?', a.id);
+      purgeFileIfUnused(ctx, a.file_id);
+    });
     return { ok: true };
   });
 

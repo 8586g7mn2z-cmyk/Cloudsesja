@@ -138,28 +138,34 @@ export function updateTask(ctx: Ctx, id: number, t: TaskInput) {
   });
 }
 
-/** Przelicza przypomnienia zadania po zmianie terminu, wykonawców lub stanu. */
+/**
+ * Uzgadnia przypomnienia zadania z jego bieżącym stanem. Przypomnienie jest identyfikowane przez wykonawcę
+ * i pierwotny termin (base_at = start − wyprzedzenie). Dopóki ten termin się nie zmienia, istniejące przypomnienie
+ * zostaje nietknięte: nie wraca po potwierdzeniu, nie traci odłożenia i nie wysyła e-maila/SMS-a drugi raz.
+ */
 export function syncReminders(ctx: Ctx, taskId: number) {
   const t = ctx.db.get<any>('SELECT * FROM tasks WHERE id = ?', taskId);
   if (!t) return;
-  ctx.db.run("DELETE FROM reminders WHERE task_id = ? AND status IN ('pending', 'due')", taskId);
   const code = statusCode(ctx, t.status_id);
-  if (t.remind_before_min == null || code === 'done' || code === 'cancelled' || t.archived) return;
-  const at = addMinutesIso(t.start_at, -Number(t.remind_before_min));
-  if (t.start_at < nowIso()) return; // zadanie już się rozpoczęło
-  const ops = ctx.db.all<{ operator_id: number }>('SELECT operator_id FROM task_assignees WHERE task_id = ?', taskId);
-  for (const { operator_id } of ops) {
-    const acked = ctx.db.get("SELECT id FROM reminders WHERE task_id = ? AND operator_id = ? AND remind_at = ? AND status = 'acked'", taskId, operator_id, at);
-    if (acked) continue;
-    ctx.db.insert('reminders', {
-      task_id: taskId,
-      operator_id,
-      remind_at: at,
-      status: 'pending',
-      inapp: t.remind_inapp,
-      email: t.remind_email,
-      sms: t.remind_sms,
-    });
+  const closed = code === 'done' || code === 'cancelled' || !!t.archived;
+  const base = t.remind_before_min == null || closed ? null : addMinutesIso(t.start_at, -Number(t.remind_before_min));
+  const ops = new Set(ctx.db.all<{ operator_id: number }>('SELECT operator_id FROM task_assignees WHERE task_id = ?', taskId).map((r) => r.operator_id));
+  const rows = ctx.db.all<any>('SELECT * FROM reminders WHERE task_id = ?', taskId);
+  for (const r of rows) {
+    if (r.status === 'acked') continue;
+    const same = base !== null && ops.has(r.operator_id) && (r.base_at ?? r.remind_at) === base;
+    if (same) {
+      if (r.inapp !== t.remind_inapp || r.email !== t.remind_email || r.sms !== t.remind_sms) ctx.db.update('reminders', r.id, { inapp: t.remind_inapp, email: t.remind_email, sms: t.remind_sms });
+      continue;
+    }
+    // Zadanie zamknięte: wyświetlone już przypomnienie uznajemy za potwierdzone (nie wróci po ponownym otwarciu).
+    if (closed && r.status === 'due' && ops.has(r.operator_id)) ctx.db.update('reminders', r.id, { status: 'acked', acked_at: nowIso() });
+    else ctx.db.run('DELETE FROM reminders WHERE id = ?', r.id);
+  }
+  if (base === null || t.start_at < nowIso()) return; // brak przypomnienia albo zadanie już się rozpoczęło
+  for (const operator_id of ops) {
+    if (rows.some((r) => r.operator_id === operator_id && (r.base_at ?? r.remind_at) === base)) continue;
+    ctx.db.insert('reminders', { task_id: taskId, operator_id, remind_at: base, base_at: base, status: 'pending', inapp: t.remind_inapp, email: t.remind_email, sms: t.remind_sms });
   }
 }
 
@@ -292,12 +298,32 @@ export function generateSeries(ctx: Ctx, seriesId: number, horizonDays = SERIES_
 /** Usuwa przyszłe, nierozpoczęte wystąpienia serii (np. po zmianie definicji). */
 export function clearFutureOccurrences(ctx: Ctx, seriesId: number) {
   const newId = statusIdByCode(ctx, 'new');
-  ctx.db.run('DELETE FROM tasks WHERE series_id = ? AND occurrence_date >= ? AND status_id = ? AND progress = 0', seriesId, todayIso(), newId);
+  const ids = ctx.db
+    .all<{ id: number }>(
+      `SELECT t.id FROM tasks t WHERE t.series_id = ? AND t.occurrence_date >= ? AND t.status_id = ? AND t.progress = 0
+         AND NOT EXISTS (SELECT 1 FROM time_entries e WHERE e.task_id = t.id)
+         AND NOT EXISTS (SELECT 1 FROM attachments a WHERE a.owner_type = 'task' AND a.owner_id = t.id)
+         AND NOT EXISTS (SELECT 1 FROM internal_messages m WHERE m.task_id = t.id)`,
+      seriesId,
+      todayIso(),
+      newId,
+    )
+    .map((r) => r.id);
+  for (const id of ids) ctx.db.run('DELETE FROM tasks WHERE id = ?', id);
+  // Wystąpienia z zaewidencjonowanym czasem, załącznikami lub wiadomościami zostają bez zmian.
 }
 
 export function generateAllSeries(ctx: Ctx): number {
   const all = ctx.db.all<{ id: number }>('SELECT id FROM task_series WHERE active = 1 AND (end_date IS NULL OR end_date >= ?)', todayIso());
-  return all.reduce((n, s) => n + generateSeries(ctx, s.id), 0);
+  let n = 0;
+  for (const s of all) {
+    try {
+      n += generateSeries(ctx, s.id);
+    } catch (e) {
+      console.error(`Błąd generowania serii zadań #${s.id}`, e);
+    }
+  }
+  return n;
 }
 
 // ---------- Reguły automatyczne ----------
@@ -343,7 +369,7 @@ export function fireEvent(ctx: Ctx, event: string, p: RuleEventPayload): number[
       createTask(
         ctx,
         {
-          title: renderTemplate(r.title_tpl, data),
+          title: renderTemplate(r.title_tpl, data).trim() || r.name,
           description: r.description_tpl ? renderTemplate(r.description_tpl, data) : null,
           start_at: start,
           end_at: addMinutesIso(start, Number(r.duration_min) || 30),

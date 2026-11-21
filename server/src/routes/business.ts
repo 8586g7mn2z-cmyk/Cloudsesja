@@ -1,9 +1,17 @@
 import type { FastifyInstance } from 'fastify';
 import type { Ctx } from '../context.js';
-import { isManager, requireUser } from '../auth.js';
+import { isManager, requireUser, type User } from '../auth.js';
 import { audit, bad, forbidden, makeNumber, notFound, nowIso, round2, str, todayIso, toInt, toNum } from '../util.js';
 import { fireEvent } from '../services/tasks.js';
 import { attachmentsFor } from './contractors.js';
+
+/** Poprawna data kalendarzowa w formacie RRRR-MM-DD. */
+function isDate(v: any): boolean {
+  if (typeof v !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(v)) return false;
+  const [y, m, d] = v.split('-').map(Number);
+  const t = new Date(Date.UTC(y, m - 1, d));
+  return t.getUTCFullYear() === y && t.getUTCMonth() === m - 1 && t.getUTCDate() === d;
+}
 
 interface ItemIn {
   product_id?: number | null;
@@ -24,8 +32,9 @@ function items(ctx: Ctx, list: any[]): (ItemIn & { net_value: number; gross_valu
       const price = toNum(i.net_price) ?? prod?.net_price;
       const vat = toNum(i.vat_rate) ?? prod?.vat_rate ?? 23;
       if (!name) throw bad(`Pozycja ${idx + 1}: podaj nazwę.`);
-      if (qty == null || qty <= 0) throw bad(`Pozycja ${idx + 1}: ilość musi być większa od zera.`);
-      if (price == null || price < 0) throw bad(`Pozycja ${idx + 1}: niepoprawna cena.`);
+      if (qty == null || !(qty > 0) || qty > 1e9) throw bad(`Pozycja ${idx + 1}: ilość musi być większa od zera.`);
+      if (price == null || !(price >= 0) || price > 1e12) throw bad(`Pozycja ${idx + 1}: niepoprawna cena.`);
+      if (!(vat >= 0 && vat <= 100)) throw bad(`Pozycja ${idx + 1}: stawka VAT musi mieścić się w przedziale 0–100%.`);
       const net = round2(qty * price);
       return { product_id: prod?.id ?? null, name, qty, unit: str(i.unit) ?? prod?.unit ?? 'szt.', net_price: price, vat_rate: vat, net_value: net, gross_value: round2(net * (1 + vat / 100)) };
     });
@@ -144,13 +153,13 @@ export async function businessRoutes(app: FastifyInstance, ctx: Ctx) {
     return { sku: str(b.sku), name: str(b.name), unit: str(b.unit) ?? 'szt.', net_price: price, vat_rate: vat, ean: str(b.ean), product_group: str(b.product_group), active: b.active === false ? 0 : 1 };
   };
   app.post('/api/products', async (req) => {
-    requireUser(req);
+    if (!isManager(requireUser(req))) throw forbidden('Kartotekę towarową zmienia kierownik lub administrator.');
     const d = productData(req.body);
     if (d.sku && db.get('SELECT id FROM products WHERE sku = ?', d.sku)) throw bad('Towar o takim indeksie już istnieje.');
     return { id: db.insert('products', { ...d, created_at: nowIso() }) };
   });
   app.put('/api/products/:id', async (req) => {
-    requireUser(req);
+    if (!isManager(requireUser(req))) throw forbidden('Kartotekę towarową zmienia kierownik lub administrator.');
     const id = Number((req.params as any).id);
     const d = productData(req.body);
     if (d.sku && db.get('SELECT id FROM products WHERE sku = ? AND id <> ?', d.sku, id)) throw bad('Towar o takim indeksie już istnieje.');
@@ -158,7 +167,7 @@ export async function businessRoutes(app: FastifyInstance, ctx: Ctx) {
     return { id };
   });
   app.delete('/api/products/:id', async (req) => {
-    requireUser(req);
+    if (!isManager(requireUser(req))) throw forbidden('Kartotekę towarową zmienia kierownik lub administrator.');
     const id = Number((req.params as any).id);
     const used = db.get<any>('SELECT (SELECT COUNT(*) FROM order_items WHERE product_id = ?) + (SELECT COUNT(*) FROM sale_items WHERE product_id = ?) AS n', id, id)!.n;
     if (used) db.run('UPDATE products SET active = 0 WHERE id = ?', id);
@@ -189,7 +198,8 @@ export async function businessRoutes(app: FastifyInstance, ctx: Ctx) {
   });
   const orderData = (b: any) => {
     if (!toInt(b.contractor_id)) throw bad('Wybierz kontrahenta.');
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(b.order_date ?? '')) throw bad('Podaj datę zamówienia.');
+    if (!isDate(b.order_date)) throw bad('Podaj poprawną datę zamówienia.');
+    if (b.delivery_date && !isDate(b.delivery_date)) throw bad('Niepoprawna data dostawy.');
     return { contractor_id: toInt(b.contractor_id), order_date: b.order_date, delivery_date: str(b.delivery_date), status_id: toInt(b.status_id), operator_id: toInt(b.operator_id), project_id: toInt(b.project_id), notes: b.notes ?? null };
   };
   const writeItems = (table: 'order_items' | 'sale_items', fk: string, id: number, list: ReturnType<typeof items>) => {
@@ -218,7 +228,9 @@ export async function businessRoutes(app: FastifyInstance, ctx: Ctx) {
   app.put('/api/orders/:id', async (req) => {
     const u = requireUser(req);
     const id = Number((req.params as any).id);
-    if (!db.get('SELECT id FROM orders WHERE id = ?', id)) throw notFound();
+    const cur = db.get<any>('SELECT operator_id, created_by FROM orders WHERE id = ?', id);
+    if (!cur) throw notFound();
+    if (!isManager(u) && cur.operator_id !== u.id && cur.created_by !== u.id) throw forbidden('Zamówienie może zmienić jego opiekun, kierownik lub administrator.');
     const b = req.body as any;
     const d = orderData(b);
     const its = items(ctx, b.items);
@@ -260,12 +272,20 @@ export async function businessRoutes(app: FastifyInstance, ctx: Ctx) {
   });
   const saleData = (b: any) => {
     if (!str(b.doc_number)) throw bad('Podaj numer dokumentu sprzedaży.');
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(b.doc_date ?? '')) throw bad('Podaj datę dokumentu.');
+    if (!isDate(b.doc_date)) throw bad('Podaj poprawną datę dokumentu.');
     if (!toInt(b.contractor_id)) throw bad('Wybierz kontrahenta.');
     return { doc_number: str(b.doc_number), doc_date: b.doc_date, contractor_id: toInt(b.contractor_id), operator_id: toInt(b.operator_id), notes: b.notes ?? null };
   };
-  const saveSale = (id: number | null, b: any, userId: number) => {
+  const saveSale = (id: number | null, b: any, u: User) => {
+    const userId = u.id;
     const d = saleData(b);
+    if (id) {
+      const cur = db.get<any>('SELECT operator_id, created_by, source FROM sales WHERE id = ?', id);
+      if (!cur) throw notFound();
+      // Sprzedaż jest podstawą raportu skuteczności: handlowiec poprawia tylko własne, ręcznie wprowadzone dokumenty.
+      if (!isManager(u) && (cur.source === 'import' || (cur.operator_id !== u.id && cur.created_by !== u.id))) throw forbidden('Ten dokument sprzedaży może zmienić kierownik lub administrator.');
+      if (!isManager(u)) d.operator_id = cur.operator_id;
+    } else if (!isManager(u)) d.operator_id = u.id;
     const its = items(ctx, b.items);
     return db.tx(() => {
       let net = toNum(b.net_total);
@@ -284,11 +304,11 @@ export async function businessRoutes(app: FastifyInstance, ctx: Ctx) {
   };
   app.post('/api/sales', async (req) => {
     const u = requireUser(req);
-    return { id: saveSale(null, req.body, u.id) };
+    return { id: saveSale(null, req.body, u) };
   });
   app.put('/api/sales/:id', async (req) => {
     const u = requireUser(req);
-    return { id: saveSale(Number((req.params as any).id), req.body, u.id) };
+    return { id: saveSale(Number((req.params as any).id), req.body, u) };
   });
   app.delete('/api/sales/:id', async (req) => {
     const u = requireUser(req);

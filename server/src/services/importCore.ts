@@ -106,12 +106,11 @@ export interface ImportOptions {
 const reject = (reason: string): UpsertResult => ({ status: 'odrzucono', reason });
 
 function dictId(ctx: Ctx, dict: string, name: string, create: boolean, parentId?: number | null): number | 'missing' {
-  const r = ctx.db.get<{ id: number }>(
-    `SELECT id FROM dict_items WHERE dict = ? AND lower(name) = lower(?)${parentId ? ' AND parent_id = ?' : ''}`,
-    dict,
-    name,
-    ...(parentId ? [parentId] : []),
-  );
+  // porównanie w JS: lower() w SQLite nie zna polskich znaków („ŻABKA” ≠ „żabka”)
+  const want = name.trim().toLocaleLowerCase('pl');
+  const r = ctx.db
+    .all<{ id: number; name: string }>(`SELECT id, name FROM dict_items WHERE dict = ?${parentId ? ' AND parent_id = ?' : ''}`, dict, ...(parentId ? [parentId] : []))
+    .find((x) => x.name.trim().toLocaleLowerCase('pl') === want);
   if (r) return r.id;
   if (!create) return 'missing';
   const max = ctx.db.get<{ m: number }>('SELECT COALESCE(MAX(sort), 0) AS m FROM dict_items WHERE dict = ?', dict)!.m;
@@ -119,7 +118,8 @@ function dictId(ctx: Ctx, dict: string, name: string, create: boolean, parentId?
 }
 
 export function findOperator(ctx: Ctx, v: string): number | null {
-  return ctx.db.get<{ id: number }>('SELECT id FROM operators WHERE lower(login) = lower(?) OR lower(name) = lower(?)', v, v)?.id ?? null;
+  const want = v.trim().toLocaleLowerCase('pl');
+  return ctx.db.all<{ id: number; login: string; name: string }>('SELECT id, login, name FROM operators').find((o) => o.login.toLocaleLowerCase('pl') === want || o.name.trim().toLocaleLowerCase('pl') === want)?.id ?? null;
 }
 
 function findByExternal(ctx: Ctx, table: string, ref: ExternalRef): number | null {
@@ -303,7 +303,9 @@ export function upsertSale(ctx: Ctx, rec: SaleRecord, opt: ImportOptions): Upser
   let saleId: number;
   if (ex) {
     saleId = ex;
-    ctx.db.update('sales', saleId, data);
+    // Pola, których plik nie podaje, zostają bez zmian (handlowiec, źródło wpisu ręcznego).
+    const cur = ctx.db.get<any>('SELECT operator_id, source FROM sales WHERE id = ?', saleId);
+    ctx.db.update('sales', saleId, { ...data, operator_id: rec.operator ? op : cur?.operator_id ?? op, source: cur?.source === 'ręcznie' ? 'ręcznie' : 'import' });
     ctx.db.run('DELETE FROM sale_items WHERE sale_id = ?', saleId);
   } else saleId = ctx.db.insert('sales', { ...data, created_at: nowIso(), created_by: opt.actorId });
   items.forEach((it, idx) => ctx.db.insert('sale_items', { ...it, sale_id: saleId, sort: idx }));

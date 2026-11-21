@@ -7,9 +7,9 @@ import { useApp } from '../lib/store';
 import { Check, Input, Loading, Modal, Notice, Select } from '../components/ui';
 
 export function ImportPage() {
-  const { toast, reloadContractors, reloadDicts } = useApp();
-  const meta = useApi<any>('/api/import/kinds');
-  const logs = useApi<any[]>('/api/import/logs');
+  const { toast, reloadContractors, reloadDicts, isManager, isAdmin } = useApp();
+  const meta = useApi<any>(isManager ? '/api/import/kinds' : null);
+  const logs = useApi<any[]>(isManager ? '/api/import/logs' : null);
   const [kind, setKind] = useState('contractors');
   const [source, setSource] = useState('');
   const [file, setFile] = useState<File | null>(null);
@@ -21,6 +21,7 @@ export function ImportPage() {
   const [error, setError] = useState<string | null>(null);
   const [logDetail, setLogDetail] = useState<any>(null);
 
+  if (!isManager) return <div className="page"><div className="page-head"><h1>Import danych</h1></div><div style={{ padding: 12 }}><Notice kind="info">Import danych wykonuje kierownik lub administrator.</Notice></div></div>;
   if (!meta.data) return <Loading />;
   const fields = meta.data.kinds[kind].fields as any[];
   const reset = () => (setPrep(null), setResult(null), setError(null));
@@ -100,7 +101,7 @@ export function ImportPage() {
                 </tbody>
               </table>
               <div className="row mt8">
-                {kind === 'contractors' && <Check checked={createDicts} onChange={setCreateDicts}>dopisuj brakujące pozycje słowników (typ, status, grupa…)</Check>}
+                {kind === 'contractors' && (isAdmin ? <Check checked={createDicts} onChange={setCreateDicts}>dopisuj brakujące pozycje słowników (typ, status, grupa…)</Check> : <span className="small muted">Wartości spoza słowników zostaną odrzucone; nowe pozycje słowników dopisuje przy imporcie tylko administrator.</span>)}
                 <span className="grow" />
                 <button className="btn" disabled={busy} onClick={() => run(true)}>Sprawdź bez zapisu (podgląd)</button>
                 <button className="btn primary" disabled={busy} onClick={() => run(false)}><CheckCircle2 size={14} /> Importuj</button>

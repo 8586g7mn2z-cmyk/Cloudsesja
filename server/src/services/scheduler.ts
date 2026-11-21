@@ -12,7 +12,10 @@ export async function runSchedule(ctx: Ctx, scheduleId: number): Promise<{ ok: b
   const s = ctx.db.get<any>('SELECT * FROM report_schedules WHERE id = ?', scheduleId);
   if (!s) return { ok: false, info: 'Brak harmonogramu.' };
   const owner = loadUser(ctx, s.created_by);
-  if (!owner) return { ok: false, info: 'Autor harmonogramu jest nieaktywny.' };
+  if (!owner) {
+    ctx.db.update('report_schedules', s.id, { last_run_at: nowIso(), last_status: 'Autor harmonogramu jest nieaktywny — raport nie został wysłany.', next_run_at: nextRun(s, nowIso()) });
+    return { ok: false, info: 'Autor harmonogramu jest nieaktywny.' };
+  }
   try {
     const params = JSON.parse(s.params || '{}');
     const range = periodRange(s.period, todayIso());
@@ -50,17 +53,27 @@ export async function runSchedule(ctx: Ctx, scheduleId: number): Promise<{ ok: b
 
 let lastSeriesRun = '';
 
-export async function tick(ctx: Ctx) {
-  processReminders(ctx);
-  deliverInternal(ctx);
+export async function tick(ctx: Ctx, log: (msg: string, e?: unknown) => void = (m, e) => console.error(m, e)) {
+  // Każdy krok osobno: błąd w jednym (np. w pojedynczej serii) nie wstrzymuje przypomnień, raportów ani wysyłki.
+  const step = async (name: string, fn: () => unknown) => {
+    try {
+      await fn();
+    } catch (e) {
+      log(`Błąd schedulera (${name})`, e);
+    }
+  };
+  await step('przypomnienia', () => processReminders(ctx));
+  await step('wiadomości wewnętrzne', () => deliverInternal(ctx));
   const hour = nowIso().slice(0, 13);
   if (hour !== lastSeriesRun) {
     lastSeriesRun = hour;
-    generateAllSeries(ctx);
+    await step('zadania cykliczne', () => generateAllSeries(ctx));
   }
-  const due = ctx.db.all<{ id: number }>('SELECT id FROM report_schedules WHERE active = 1 AND next_run_at IS NOT NULL AND next_run_at <= ?', nowIso());
-  for (const s of due) await runSchedule(ctx, s.id);
-  await processOutbox(ctx);
+  await step('raporty automatyczne', async () => {
+    const due = ctx.db.all<{ id: number }>('SELECT id FROM report_schedules WHERE active = 1 AND next_run_at IS NOT NULL AND next_run_at <= ?', nowIso());
+    for (const s of due) await runSchedule(ctx, s.id);
+  });
+  await step('kolejka wysyłki', () => processOutbox(ctx));
 }
 
 export function startScheduler(ctx: Ctx, log: (msg: string, e?: unknown) => void) {
@@ -69,7 +82,7 @@ export function startScheduler(ctx: Ctx, log: (msg: string, e?: unknown) => void
     if (running) return;
     running = true;
     try {
-      await tick(ctx);
+      await tick(ctx, log);
     } catch (e) {
       log('Błąd schedulera', e);
     } finally {

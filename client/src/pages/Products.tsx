@@ -56,10 +56,11 @@ export function ProductsPage() {
   const nav = useNavigate();
   const list = useApi<any[]>('/api/products');
   const [form, setForm] = useState<any>(null);
+  const { isManager } = useApp();
   return (
     <div className="page">
-      <div className="page-head"><h1>Kartoteka towarowa</h1></div>
-      <DataTable id="products" title="Kartoteka towarowa" columns={cols} rows={list.data} loading={list.loading} error={list.error} onOpen={(r) => setForm(r)} defaultSort={[{ key: 'name', dir: 1 }]} toolbar={<><button className="btn primary" onClick={() => setForm({})}><Plus size={14} /> Nowy towar</button><button className="btn" onClick={() => nav('/import')}><Upload size={14} /> Import towarów</button></>} emptyText="Brak towarów w kartotece." />
+      <div className="page-head"><h1>Kartoteka towarowa</h1>{!isManager && <span className="small muted">Kartotekę towarową zmienia kierownik lub administrator.</span>}</div>
+      <DataTable id="products" title="Kartoteka towarowa" columns={cols} rows={list.data} loading={list.loading} error={list.error} onOpen={isManager ? (r) => setForm(r) : undefined} defaultSort={[{ key: 'name', dir: 1 }]} toolbar={<>{isManager && <button className="btn primary" onClick={() => setForm({})}><Plus size={14} /> Nowy towar</button>}<button className="btn" onClick={() => nav('/import')}><Upload size={14} /> Import towarów</button></>} emptyText="Brak towarów w kartotece." />
       {form && <ProductForm p={form.id ? form : undefined} onClose={() => setForm(null)} onSaved={() => (setForm(null), list.reload())} />}
     </div>
   );

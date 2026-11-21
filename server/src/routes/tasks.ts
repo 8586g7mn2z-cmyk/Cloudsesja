@@ -17,6 +17,7 @@ import {
   type TaskInput,
 } from '../services/tasks.js';
 import { attachmentsFor } from './contractors.js';
+import { purgeFileIfUnused } from '../services/files.js';
 
 export function taskList(ctx: Ctx, where: string, params: any[]) {
   const now = nowIso();
@@ -65,6 +66,18 @@ function visibility(ctx: Ctx, u: User): { sql: string; params: any[] } {
     sql: `(t.principal_id = ? OR t.created_by = ? OR EXISTS (SELECT 1 FROM task_assignees a WHERE a.task_id = t.id AND a.operator_id IN (${ids.map(() => '?').join(',')})))`,
     params: [u.id, u.id, ...ids],
   };
+}
+
+/**
+ * Czy użytkownik może zobaczyć zadanie. Zadania powiązane z kontrahentem lub projektem są częścią wspólnej
+ * kartoteki (widzi je każdy operator); zadania bez takiego powiązania widzą tylko zlecający, wykonawcy i ich przełożeni.
+ */
+export function canSeeTask(ctx: Ctx, u: User, taskId: number): boolean {
+  if (u.role === 'admin') return true;
+  const t = ctx.db.get<any>('SELECT principal_id, created_by, contractor_id, project_id FROM tasks WHERE id = ?', taskId);
+  if (!t) return false;
+  if (t.contractor_id || t.project_id) return true;
+  return canEditTask(ctx, u, taskId);
 }
 
 export function canEditTask(ctx: Ctx, u: User, taskId: number): boolean {
@@ -131,6 +144,7 @@ export async function taskRoutes(app: FastifyInstance, ctx: Ctx) {
     const id = Number((req.params as any).id);
     const t = taskList(ctx, 'WHERE t.id = ?', [id])[0];
     if (!t) throw notFound('Zadanie nie istnieje.');
+    if (!canSeeTask(ctx, u, id)) throw forbidden('Nie masz dostępu do tego zadania.');
     const time = db.all('SELECT e.*, o.name AS operator FROM time_entries e JOIN operators o ON o.id = e.operator_id WHERE e.task_id = ? ORDER BY e.work_date', id);
     const reminders = db.all('SELECT r.*, o.name AS operator FROM reminders r JOIN operators o ON o.id = r.operator_id WHERE r.task_id = ? ORDER BY r.remind_at', id);
     return { ...t, time_entries: time, reminders, attachments: attachmentsFor(ctx, u, 'task', id), can_edit: canEditTask(ctx, u, id) };
@@ -163,8 +177,11 @@ export async function taskRoutes(app: FastifyInstance, ctx: Ctx) {
     if (!start || isNaN(parseLocal(start).getTime())) throw bad('Niepoprawny termin.');
     if (start.length === 16) start += ':00';
     const dur = Math.max(5, minutesBetween(t.start_at, t.end_at));
-    const end = (req.body as any)?.end_at ? String((req.body as any).end_at) : addMinutesIso(start, dur);
-    db.update('tasks', id, { start_at: start, end_at: end.length === 16 ? `${end}:00` : end, updated_at: nowIso() });
+    let end = (req.body as any)?.end_at ? String((req.body as any).end_at) : addMinutesIso(start, dur);
+    if (end.length === 16) end += ':00';
+    if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/.test(start) || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/.test(end) || isNaN(parseLocal(end).getTime())) throw bad('Niepoprawny termin.');
+    if (end < start) throw bad('Termin zakończenia nie może być wcześniejszy niż rozpoczęcia.');
+    db.update('tasks', id, { start_at: start, end_at: end, updated_at: nowIso() });
     syncReminders(ctx, id);
     return { ok: true };
   });
@@ -193,8 +210,12 @@ export async function taskRoutes(app: FastifyInstance, ctx: Ctx) {
     if (!(u.role === 'admin' || t.created_by === u.id || t.principal_id === u.id || (isManager(u) && canEditTask(ctx, u, id)))) throw forbidden('Usunąć zadanie może zlecający, autor lub kierownik.');
     db.tx(() => {
       db.run('UPDATE internal_messages SET task_id = NULL WHERE task_id = ?', id);
+      // Zaewidencjonowany czas pracy zostaje w raportach także po usunięciu zadania.
+      db.run('UPDATE time_entries SET task_id = NULL, contractor_id = COALESCE(contractor_id, ?), project_id = COALESCE(project_id, ?), note = COALESCE(note, ?) WHERE task_id = ?', t.contractor_id, t.project_id, `Zadanie usunięte: ${t.title}`, id);
+      const fileIds = db.all<{ file_id: number }>("SELECT file_id FROM attachments WHERE owner_type = 'task' AND owner_id = ?", id).map((r) => r.file_id);
       db.run("DELETE FROM attachments WHERE owner_type = 'task' AND owner_id = ?", id);
       db.run('DELETE FROM tasks WHERE id = ?', id);
+      fileIds.forEach((f) => purgeFileIfUnused(ctx, f));
     });
     audit(db, u.id, 'task', id, 'usunięcie', { title: t.title });
     return { ok: true };
@@ -206,10 +227,12 @@ export async function taskRoutes(app: FastifyInstance, ctx: Ctx) {
     const id = Number((req.params as any).id);
     const t = db.get<any>('SELECT * FROM tasks WHERE id = ?', id);
     if (!t) throw notFound();
+    if (!canSeeTask(ctx, u, id)) throw forbidden('Nie masz dostępu do tego zadania.');
     const b = req.body as any;
     const minutes = toInt(b.minutes);
     if (!minutes || minutes <= 0 || minutes > 24 * 60) throw bad('Podaj czas w minutach (1–1440).');
     const date = str(b.work_date) ?? todayIso();
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || isNaN(parseLocal(date).getTime())) throw bad('Niepoprawna data pracy.');
     const opId = toInt(b.operator_id) ?? u.id;
     if (opId !== u.id && !canSeeOperator(ctx, u, opId)) throw forbidden('Nie możesz wpisać czasu za tego operatora.');
     return { id: db.insert('time_entries', { operator_id: opId, work_date: date, minutes, task_id: id, contractor_id: t.contractor_id, project_id: t.project_id, note: str(b.note), created_at: nowIso() }) };
@@ -232,7 +255,7 @@ export async function taskRoutes(app: FastifyInstance, ctx: Ctx) {
     if (!/^\d{2}:\d{2}$/.test(b.time_from ?? '') || !/^\d{2}:\d{2}$/.test(b.time_to ?? '') || b.time_to <= b.time_from) throw bad('Podaj poprawne godziny (od < do).');
     const ops = (Array.isArray(b.operator_ids) ? b.operator_ids : []).map(Number).filter(Boolean);
     if (!ops.length) ops.push(u.id);
-    const weekdays = b.freq === 'weekly' ? (b.weekdays ?? []).map(Number) : null;
+    const weekdays = b.freq === 'weekly' ? (Array.isArray(b.weekdays) ? b.weekdays : []).map(Number).filter((d: number) => d >= 1 && d <= 7) : null;
     if (b.freq === 'weekly' && !weekdays.length) throw bad('Zaznacz co najmniej jeden dzień tygodnia.');
     const interval = Math.max(1, toInt(b.interval_n) ?? 1);
     return {

@@ -137,6 +137,8 @@ export async function sendMailNow(
     auth: s.user ? { user: s.user, pass: decryptSecret(ctx, s.password_enc) } : undefined,
     tls: s.ignore_tls_errors ? { rejectUnauthorized: false } : undefined,
     connectionTimeout: 15000,
+    greetingTimeout: 15000,
+    socketTimeout: 60000,
   });
   const atts = (m.attachments ?? []).map((a) => {
     if (a.file_id) {
@@ -218,14 +220,14 @@ function setStatus(ctx: Ctx, id: number, status: OutboxStatus, error: string | n
   propagate(ctx, id, status, error);
 }
 
-const MAX_ATTEMPTS = 3;
+const MAX_ATTEMPTS = 6; // z rosnącymi odstępami 2, 4, 8, 16, 32 min — krótka awaria serwera poczty nie wymaga ręcznej interwencji
 let current: Promise<number> | null = null;
 
 /** Przetwarza kolejkę: wysyła oczekujące wiadomości. Zwraca liczbę przetworzonych pozycji.
  *  Gdy przetwarzanie już trwa, czeka na jego koniec i przetwarza ponownie (nowe pozycje). */
-export async function processOutbox(ctx: Ctx, limit = 50): Promise<number> {
+export async function processOutbox(ctx: Ctx, limit = 50, onlyId?: number): Promise<number> {
   while (current) await current.catch(() => 0);
-  current = runOutbox(ctx, limit);
+  current = runOutbox(ctx, limit, onlyId);
   try {
     return await current;
   } finally {
@@ -233,7 +235,7 @@ export async function processOutbox(ctx: Ctx, limit = 50): Promise<number> {
   }
 }
 
-async function runOutbox(ctx: Ctx, limit: number): Promise<number> {
+async function runOutbox(ctx: Ctx, limit: number, onlyId?: number): Promise<number> {
   {
     const now = nowIso();
     // Wiadomości czekające na konfigurację wracają do kolejki, gdy kanał zostanie skonfigurowany.
@@ -243,11 +245,9 @@ async function runOutbox(ctx: Ctx, limit: number): Promise<number> {
         ids.forEach((r) => setStatus(ctx, r.id, 'queued', null));
       }
     }
-    const items = ctx.db.all<any>(
-      "SELECT * FROM outbox WHERE status = 'queued' AND (send_after IS NULL OR send_after <= ?) ORDER BY id LIMIT ?",
-      now,
-      limit,
-    );
+    const items = onlyId
+      ? ctx.db.all<any>("SELECT * FROM outbox WHERE status = 'queued' AND id = ?", onlyId)
+      : ctx.db.all<any>("SELECT * FROM outbox WHERE status = 'queued' AND (send_after IS NULL OR send_after <= ?) ORDER BY id LIMIT ?", now, limit);
     let n = 0;
     for (const it of items) {
       ctx.db.update('outbox', it.id, { status: 'sending', attempts: it.attempts + 1 });
@@ -292,4 +292,9 @@ export function escapeHtml(s: string): string {
 }
 export function textToHtml(s: string): string {
   return `<div style="font-family:Arial,sans-serif;font-size:14px;line-height:1.5">${escapeHtml(s).replace(/\n/g, '<br>')}</div>`;
+}
+
+/** Po restarcie serwera: pozycje przerwane w trakcie wysyłania wracają do kolejki. */
+export function recoverOutbox(ctx: Ctx): number {
+  return ctx.db.run("UPDATE outbox SET status = 'queued', send_after = NULL WHERE status = 'sending'").changes as number;
 }

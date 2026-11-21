@@ -88,7 +88,7 @@ function inactivity(ctx: Ctx, u: User, p: ReportParams): ReportResult {
     .map((r) => ({
       ...r,
       kluczowy: r.is_key ? 'tak' : '',
-      dni: r.last_contact ? Math.floor((today - parseLocal(r.last_contact.slice(0, 10)).getTime()) / 86400000) : null,
+      dni: r.last_contact ? Math.round((today - parseLocal(r.last_contact.slice(0, 10)).getTime()) / 86400000) : null,
       ostatni: r.last_contact ? r.last_contact.slice(0, 10) : 'nigdy',
     }))
     .sort((a, b) => (b.dni ?? 1e9) - (a.dni ?? 1e9));
@@ -296,7 +296,7 @@ function activity(ctx: Ctx, u: User, p: ReportParams): ReportResult {
 function timeReport(ctx: Ctx, u: User, p: ReportParams): ReportResult {
   const per = period(p);
   const ops = scopeOperators(ctx, u, p.operator_id);
-  const by = p.group_by ?? 'operator';
+  const by = (['operator', 'contractor', 'project'] as const).includes(p.group_by as any) ? p.group_by! : 'operator';
   const fc = inList(ops, 'k.operator_id');
   const ft = inList(ops, 'e.operator_id');
   const keyCol = { operator: 'operator_id', contractor: 'contractor_id', project: 'project_id' }[by];

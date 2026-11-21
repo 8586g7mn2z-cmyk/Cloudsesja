@@ -158,6 +158,7 @@ export async function correspondenceRoutes(app: FastifyInstance, ctx: Ctx) {
     const id = Number((req.params as any).id);
     const k = db.get<any>('SELECT * FROM correspondence WHERE id = ?', id);
     if (!k) throw notFound();
+    if (k.operator_id !== u.id && !isManager(u)) throw forbidden('Wysłać korespondencję może jej autor, kierownik lub administrator.');
     if (k.send_status === 'sent') throw bad('Ta wiadomość została już wysłana.');
     if (k.send_status && ['queued', 'sending', 'awaiting_config'].includes(k.send_status)) throw bad('Wiadomość jest już w kolejce wysyłki.');
     const code = kindCode(ctx, k.kind_id);
@@ -177,7 +178,9 @@ export async function correspondenceRoutes(app: FastifyInstance, ctx: Ctx) {
         queueMessage(ctx, { channel: 'sms', recipient: k.phone_to, body_text: k.body, correspondence_id: id, created_by: u.id });
       });
     } else throw bad('Wysyłać można tylko korespondencję rodzaju E-mail lub SMS.');
-    await processOutbox(ctx);
+    // w ramach żądania wysyłamy tylko tę wiadomość; reszta kolejki idzie w tle
+    const own = db.get<any>("SELECT id FROM outbox WHERE correspondence_id = ? AND status = 'queued' ORDER BY id DESC LIMIT 1", id);
+    if (own) await processOutbox(ctx, 1, own.id);
     const after = db.get<any>('SELECT send_status, send_error FROM correspondence WHERE id = ?', id);
     return { status: after.send_status, status_label: OUTBOX_LABELS[after.send_status] ?? after.send_status, error: after.send_error };
   });
@@ -395,7 +398,7 @@ export async function correspondenceRoutes(app: FastifyInstance, ctx: Ctx) {
     if (deliver.length === 16) deliver += ':00';
     if (isNaN(parseLocal(deliver).getTime())) throw bad('Niepoprawny termin doręczenia.');
     const id = db.tx(() => {
-      const id = db.insert('internal_messages', { sender_id: u.id, subject: str(b.subject), body: b.body ?? '', deliver_at: deliver, task_id: toInt(b.task_id), created_at: nowIso() });
+      const id = db.insert('internal_messages', { sender_id: u.id, subject: str(b.subject), body: b.body == null ? '' : String(b.body), deliver_at: deliver, task_id: toInt(b.task_id), created_at: nowIso() });
       for (const r of ids) db.run('INSERT INTO internal_recipients (message_id, recipient_id, delivered_at) VALUES (?, ?, ?)', id, r, deliver <= nowIso() ? nowIso() : null);
       return id;
     });

@@ -2,8 +2,8 @@ import type { FastifyInstance } from 'fastify';
 import fs from 'node:fs';
 import type { Ctx } from '../context.js';
 import { isManager, requireUser, type User } from '../auth.js';
-import { bad, forbidden, fmtDatePl, fmtMoney, makeNumber, notFound, nowIso, renderTemplate, str, todayIso, toInt } from '../util.js';
-import { contentDisposition, extOf, filePath, getFile, saveFile } from '../services/files.js';
+import { bad, forbidden, fmtDatePl, fmtMoney, makeNumber, notFound, nowIso, renderTemplate, str, todayIso, toInt, audit } from '../util.js';
+import { contentDisposition, extOf, fileHeaders, filePath, getFile, purgeFileIfUnused, saveFile } from '../services/files.js';
 import { documentLevel, documentLevels, folderLevel, logDocument, permEntries, type Level } from '../services/docperms.js';
 import { company, templatePdf, type DocItem } from '../services/pdf.js';
 import { readUpload } from './core.js';
@@ -161,6 +161,9 @@ export async function documentRoutes(app: FastifyInstance, ctx: Ctx) {
     const u = requireUser(req);
     const { type, id } = req.params as any;
     if (type === 'document') requireDocLevel(ctx, u, Number(id), 'view');
+    else if (type === 'folder') {
+      if (folderLevel(ctx, u, Number(id)) === 'none') throw forbidden('Brak uprawnień do tego segregatora.');
+    } else throw bad('Nieznany obiekt.');
     return db.all<any>(
       `SELECT p.*, CASE p.subject_type WHEN 'operator' THEN o.name WHEN 'department' THEN d.name ELSE 'Wszyscy operatorzy' END AS subject_name
        FROM document_permissions p LEFT JOIN operators o ON p.subject_type = 'operator' AND o.id = p.subject_id
@@ -270,8 +273,7 @@ export async function documentRoutes(app: FastifyInstance, ctx: Ctx) {
     const f = getFile(ctx, v.file_id)!;
     const inline = q.inline === '1';
     logDocument(ctx, id, u.id, inline ? 'podgląd' : 'pobranie', ver);
-    reply.header('Content-Type', f.mime ?? 'application/octet-stream');
-    reply.header('Content-Disposition', contentDisposition(f.original_name, inline));
+    fileHeaders(reply, f, inline);
     return reply.send(fs.createReadStream(filePath(ctx, f)));
   });
   app.delete('/api/documents/:id', async (req) => {
@@ -279,9 +281,13 @@ export async function documentRoutes(app: FastifyInstance, ctx: Ctx) {
     if (u.role !== 'admin') throw forbidden('Dokumenty usuwa administrator; pozostali mogą je archiwizować.');
     const id = Number((req.params as any).id);
     db.tx(() => {
-      db.run('UPDATE attachments SET source_document_id = NULL WHERE source_document_id = ?', id);
+      // Kopie dokumentu dołączone jako załączniki znikają razem z nim (nie mogą przeżyć jako plik bez kontroli dostępu).
+      const fileIds = new Set<number>(db.all<{ file_id: number }>('SELECT file_id FROM document_versions WHERE document_id = ?', id).map((r) => r.file_id));
+      db.run('DELETE FROM attachments WHERE source_document_id = ?', id);
       db.run("DELETE FROM document_permissions WHERE target_type = 'document' AND target_id = ?", id);
       db.run('DELETE FROM documents WHERE id = ?', id);
+      fileIds.forEach((f) => purgeFileIfUnused(ctx, f));
+      audit(db, u.id, 'document', id, 'usunięcie');
     });
     return { ok: true };
   });
@@ -389,7 +395,8 @@ export async function documentRoutes(app: FastifyInstance, ctx: Ctx) {
     if (!tpl) throw notFound('Szablon nie istnieje.');
     const folderId = toInt(b.folder_id) ?? tpl.folder_id;
     if (!canAddToFolder(ctx, u, folderId)) throw forbidden('Brak uprawnień do dodawania dokumentów w tym segregatorze.');
-    // numer rezerwujemy przed generowaniem PDF, żeby trafił do treści dokumentu
+    // najpierw walidacja danych (bez zużywania numeru), potem rezerwacja numeru, który trafia do treści dokumentu
+    buildFromTemplate(u, tpl.id, b, 'DIAGNOS/D/…');
     const number = makeNumber(db, 'D');
     const r = buildFromTemplate(u, tpl.id, b, number);
     const pdf = await templatePdf(ctx, r.body, r.items);

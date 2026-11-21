@@ -22,11 +22,20 @@ const PASSWORD_CHANGE_PATHS = new Set(['/api/auth/password', '/api/auth/me', '/a
 export async function buildApp(ctx: Ctx, opts: { logger?: boolean } = {}): Promise<FastifyInstance> {
   const app = Fastify({ logger: opts.logger ?? false, bodyLimit: 20 * 1024 * 1024, trustProxy: true });
   await app.register(cookie);
-  await app.register(multipart, { limits: { fileSize: 100 * 1024 * 1024, files: 20 } });
+  await app.register(multipart, { limits: { fileSize: 50 * 1024 * 1024, files: 10 } });
 
   app.addHook('onRequest', async (req, reply) => {
-    if (!req.url.startsWith('/api/')) return;
-    const url = req.url.split('?')[0];
+    // Decyduje dopasowana trasa, a nie surowy adres: zakodowana ścieżka (np. /%61pi/…) trafia do tych samych
+    // handlerów co /api/…, więc nie może omijać sprawdzenia sesji.
+    const route = req.routeOptions?.url ?? '';
+    let rawPath = req.url.split('?')[0];
+    try {
+      rawPath = decodeURIComponent(rawPath);
+    } catch {
+      /* zostaje surowa ścieżka */
+    }
+    if (!route.startsWith('/api/') && !rawPath.toLowerCase().startsWith('/api/')) return;
+    const url = route || rawPath;
     req.user = userFromSession(ctx, req.cookies[SESSION_COOKIE]);
     if (OPEN_PATHS.has(url)) return;
     if (!req.user) return reply.code(401).send({ error: 'Sesja wygasła. Zaloguj się ponownie.' });
@@ -34,11 +43,20 @@ export async function buildApp(ctx: Ctx, opts: { logger?: boolean } = {}): Promi
       return reply.code(403).send({ error: 'Przed dalszą pracą zmień hasło startowe.', must_change_password: true });
   });
 
+  // Żądania zapisu bez treści traktujemy jak pusty obiekt (zamiast błędu 500 w handlerze).
+  app.addHook('preHandler', async (req) => {
+    if (req.body == null && ['POST', 'PUT', 'PATCH'].includes(req.method) && !req.isMultipart?.()) (req as any).body = {};
+  });
+
   app.setErrorHandler((err: any, req, reply) => {
     if (err instanceof HttpError) return reply.code(err.status).send({ error: err.message });
     if (err.validation) return reply.code(400).send({ error: 'Niepoprawne dane żądania.' });
-    if (err.code === 'FST_REQ_FILE_TOO_LARGE') return reply.code(413).send({ error: 'Plik jest za duży (limit 100 MB).' });
-    if (String(err.message).includes('FOREIGN KEY')) return reply.code(409).send({ error: 'Rekord jest powiązany z innymi danymi i nie może zostać usunięty.' });
+    if (err.code === 'FST_REQ_FILE_TOO_LARGE') return reply.code(413).send({ error: 'Plik jest za duży (limit 50 MB).' });
+    if (String(err.message).includes('FOREIGN KEY'))
+      return req.method === 'DELETE'
+        ? reply.code(409).send({ error: 'Rekord jest powiązany z innymi danymi i nie może zostać usunięty.' })
+        : reply.code(400).send({ error: 'Wskazano rekord, który nie istnieje (np. operatora, kontrahenta lub pozycję słownika).' });
+    if (err.statusCode && err.statusCode >= 400 && err.statusCode < 500) return reply.code(err.statusCode).send({ error: 'Niepoprawne żądanie.' });
     req.log.error(err);
     console.error(err);
     reply.code(500).send({ error: 'Wystąpił błąd serwera. Szczegóły zapisano w dzienniku.' });

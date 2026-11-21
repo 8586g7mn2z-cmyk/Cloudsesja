@@ -319,7 +319,9 @@ export function DataTable<T>(p: DataTableProps<T>) {
   const exportRows = () => sorted.map((x) => exportCols.map((c) => (isNumeric(c.type) ? (rawValue(c, x.r) === '' || rawValue(c, x.r) == null ? null : Number(rawValue(c, x.r))) : x.texts[c.key])));
   const exportCsv = () => {
     const esc = (v: any) => {
-      const s = v == null ? '' : typeof v === 'number' ? String(v).replace('.', ',') : String(v);
+      let s = v == null ? '' : typeof v === 'number' ? String(v).replace('.', ',') : String(v);
+      // tekst wyglądający jak formuła (np. „=HYPERLINK(…)”) nie może wykonać się w arkuszu; numery telefonów zostają bez zmian
+      if (typeof v !== 'number' && /^[=+\-@\t\r]/.test(s) && !/^[+\-]?[\d\s().,-]+$/.test(s)) s = `'${s}`;
       return /[;"\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
     };
     const lines = [exportCols.map((c) => esc(c.label)).join(';'), ...exportRows().map((r) => r.map(esc).join(';'))];

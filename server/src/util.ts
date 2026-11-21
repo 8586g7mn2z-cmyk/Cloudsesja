@@ -177,10 +177,13 @@ export function parseDatePl(v: any): string | null {
   if (v instanceof Date && !isNaN(v.getTime())) return `${v.getUTCFullYear()}-${pad(v.getUTCMonth() + 1)}-${pad(v.getUTCDate())}`;
   const s = String(v).trim();
   let m = /^(\d{1,2})[.\-/](\d{1,2})[.\-/](\d{4})/.exec(s);
-  if (m) return `${m[3]}-${pad(+m[2])}-${pad(+m[1])}`;
-  m = /^(\d{4})-(\d{2})-(\d{2})/.exec(s);
-  if (m) return `${m[1]}-${m[2]}-${m[3]}`;
-  return null;
+  let ymd: [number, number, number] | null = null;
+  if (m) ymd = [+m[3], +m[2], +m[1]];
+  else if ((m = /^(\d{4})-(\d{2})-(\d{2})/.exec(s))) ymd = [+m[1], +m[2], +m[3]];
+  if (!ymd) return null;
+  const t = new Date(Date.UTC(ymd[0], ymd[1] - 1, ymd[2]));
+  if (t.getUTCFullYear() !== ymd[0] || t.getUTCMonth() !== ymd[1] - 1 || t.getUTCDate() !== ymd[2]) return null; // np. 31.02
+  return `${ymd[0]}-${pad(ymd[1])}-${pad(ymd[2])}`;
 }
 
 export class HttpError extends Error {

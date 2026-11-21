@@ -695,4 +695,10 @@ export const migrations: Migration[] = [
       db.insert('doc_templates', { name: 'Faktura pro forma', kind: 'proforma', title: 'Pro forma {{numer}} — {{kontrahent.skrot}}', body: templateProforma, folder_id: folder, type_id: t('Faktura pro forma'), created_at: now });
     },
   },
+  {
+    // Przypomnienia pamiętają pierwotny termin (base_at), dzięki czemu odłożenie lub potwierdzenie
+    // nie jest gubione przy późniejszych zmianach zadania.
+    version: 2,
+    sql: `ALTER TABLE reminders ADD COLUMN base_at TEXT; UPDATE reminders SET base_at = remind_at;`,
+  },
 ];

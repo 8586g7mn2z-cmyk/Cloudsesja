@@ -7,7 +7,8 @@ import { useApp } from '../lib/store';
 import { Modal, Select, Input, Notice, Loading } from './ui';
 
 export function canPreview(mime?: string | null) {
-  return !!mime && (mime.startsWith('image/') || mime === 'application/pdf' || mime.startsWith('text/'));
+  // tylko typy, które serwer wydaje do podglądu; pozostałe (HTML, SVG…) są wyłącznie pobierane
+  return !!mime && /^(application\/pdf|image\/(png|jpeg|gif|webp|bmp)|text\/plain)\b/.test(mime);
 }
 
 export function DocumentPicker({ onPick, onClose }: { onPick: (doc: any) => void; onClose: () => void }) {

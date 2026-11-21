@@ -209,7 +209,7 @@ const NAV: { sec: string; items: { to: string; label: string; icon: any; manager
   ] },
   { sec: 'Analizy', items: [{ to: '/raporty', label: 'Raporty', icon: BarChart3 }] },
   { sec: 'Narzędzia', items: [
-    { to: '/import', label: 'Import danych', icon: Upload },
+    { to: '/import', label: 'Import danych', icon: Upload, manager: true },
     { to: '/kolejka', label: 'Kolejka wysyłki', icon: Send },
     { to: '/ustawienia', label: 'Ustawienia', icon: Settings },
   ] },

@@ -2,6 +2,7 @@ import { loadConfig, openDb, type Ctx } from './context.js';
 import { buildApp } from './app.js';
 import { ensureAdmin } from './auth.js';
 import { startScheduler } from './services/scheduler.js';
+import { recoverOutbox } from './services/messaging.js';
 
 process.env.TZ ??= 'Europe/Warsaw';
 
@@ -19,6 +20,7 @@ async function main() {
     console.log('==============================================================');
   }
   const app = await buildApp(ctx, { logger: process.env.DIAGNOS_LOG === '1' });
+  recoverOutbox(ctx);
   if (config.scheduler) startScheduler(ctx, (m, e) => console.error(m, e));
   await app.listen({ port: config.port, host: config.host });
   console.log(`DIAGNOS CRM działa: http://localhost:${config.port}  (dane: ${config.dataDir})`);

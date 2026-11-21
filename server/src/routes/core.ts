@@ -47,13 +47,17 @@ export async function coreRoutes(app: FastifyInstance, ctx: Ctx) {
   // ---------- Logowanie ----------
   app.post('/api/auth/login', async (req, reply) => {
     const { login, password } = (req.body ?? {}) as any;
-    const key = String(login ?? '').toLowerCase();
+    // Licznik prób jest liczony dla pary login + adres, więc obca osoba nie zablokuje konta poprawnie logującemu się operatorowi.
+    const loginKey = String(login ?? '').toLowerCase().slice(0, 100);
+    const key = `${loginKey}|${req.ip}`;
+    if (failures.size > 5000) for (const [k, v] of failures) if (v.until < Date.now() - 600_000) failures.delete(k);
+    if (failures.size > 20000) failures.clear();
     const f = failures.get(key);
-    if (f && f.until > Date.now()) throw bad('Zbyt wiele nieudanych prób. Spróbuj ponownie za minutę.');
-    const op = db.get<any>('SELECT * FROM operators WHERE lower(login) = ? AND active = 1', key);
+    if (f && f.until > Date.now()) return reply.code(429).send({ error: 'Zbyt wiele nieudanych prób. Spróbuj ponownie za minutę.' });
+    const op = db.get<any>('SELECT * FROM operators WHERE lower(login) = ? AND active = 1', loginKey);
     if (!op || !verifyPassword(String(password ?? ''), op.password_hash)) {
       const n = (f?.n ?? 0) + 1;
-      failures.set(key, { n, until: n >= 5 ? Date.now() + 60_000 : 0 });
+      failures.set(key, { n: n >= 5 ? 0 : n, until: n >= 5 ? Date.now() + 60_000 : Date.now() });
       return reply.code(401).send({ error: 'Niepoprawny login lub hasło.' });
     }
     failures.delete(key);
@@ -78,6 +82,8 @@ export async function coreRoutes(app: FastifyInstance, ctx: Ctx) {
     if (p) throw bad(p);
     if (current === password) throw bad('Nowe hasło musi różnić się od obecnego.');
     db.run('UPDATE operators SET password_hash = ?, must_change_password = 0 WHERE id = ?', hashPassword(password), u.id);
+    // pozostałe sesje tego konta (np. na innym komputerze) przestają działać
+    db.run('DELETE FROM sessions WHERE operator_id = ? AND id <> ?', u.id, req.cookies[SESSION_COOKIE] ?? '');
     const f = path.join(ctx.config.dataDir, 'haslo-startowe-admin.txt');
     if (u.login === 'admin' && fs.existsSync(f)) fs.unlinkSync(f);
     audit(db, u.id, 'operator', u.id, 'zmiana hasła');
@@ -260,7 +266,7 @@ export async function coreRoutes(app: FastifyInstance, ctx: Ctx) {
     const u = requireRole(req, 'admin');
     const { files } = await readUpload(req);
     const f = files[0];
-    if (!f || !/image\/(png|jpeg)/.test(f.mimetype)) throw bad('Logo musi być plikiem PNG lub JPG.');
+    if (!f || !/image\/(png|jpeg)/.test(f.mimetype) || !/\.(png|jpe?g)$/i.test(f.filename)) throw bad('Logo musi być plikiem PNG lub JPG.');
     const id = saveFile(ctx, f.data, f.filename, f.mimetype, u.id);
     setSetting(ctx, 'company', { ...getSetting(ctx, 'company', defaultCompany), logo_file_id: id });
     return { id };
@@ -274,7 +280,8 @@ export async function coreRoutes(app: FastifyInstance, ctx: Ctx) {
     const c = getSetting(ctx, 'company', defaultCompany);
     const f = c.logo_file_id ? getFile(ctx, c.logo_file_id) : null;
     if (!f) throw notFound('Brak logo.');
-    reply.header('Content-Type', f.mime ?? 'image/png');
+    reply.header('Content-Type', /\.jpe?g$/i.test(f.original_name) ? 'image/jpeg' : 'image/png');
+    reply.header('X-Content-Type-Options', 'nosniff');
     return reply.send(fs.createReadStream(filePath(ctx, f)));
   });
   app.get('/api/settings/status', async () => {
@@ -375,14 +382,23 @@ export async function coreRoutes(app: FastifyInstance, ctx: Ctx) {
     );
     return rows.map((r) => ({ ...r, status_label: OUTBOX_LABELS[r.status] ?? r.status }));
   });
+  const ownOutbox = (req: any) => {
+    const u = requireUser(req);
+    const it = db.get<any>('SELECT * FROM outbox WHERE id = ?', Number(req.params.id));
+    if (!it) throw notFound();
+    if (!isManager(u) && it.created_by !== u.id) throw forbidden('Tą pozycją kolejki może zarządzać jej autor, kierownik lub administrator.');
+    return it;
+  };
   app.post('/api/outbox/:id/retry', async (req) => {
-    requireUser(req);
-    retryOutbox(ctx, Number((req.params as any).id));
+    const it = ownOutbox(req);
+    if (!['failed', 'awaiting_config', 'cancelled'].includes(it.status)) throw bad('Ponowić można tylko wysyłkę nieudaną, anulowaną lub oczekującą na konfigurację.');
+    retryOutbox(ctx, it.id);
     return { ok: true };
   });
   app.post('/api/outbox/:id/cancel', async (req) => {
-    requireUser(req);
-    cancelOutbox(ctx, Number((req.params as any).id));
+    const it = ownOutbox(req);
+    if (!['queued', 'failed', 'awaiting_config'].includes(it.status)) throw bad('Anulować można tylko wiadomość, która jeszcze nie została wysłana.');
+    cancelOutbox(ctx, it.id);
     return { ok: true };
   });
   app.post('/api/outbox/process', async (req) => {

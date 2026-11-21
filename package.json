@@ -19,7 +19,8 @@
     "test:e2e": "playwright test --trace off",
     "typecheck": "tsc -p server/tsconfig.json --noEmit && tsc -p client/tsconfig.json --noEmit",
     "seed:prod": "node --disable-warning=ExperimentalWarning dist/server/seed.js",
-    "zrzuty": "node scripts/zrzuty.cjs"
+    "zrzuty": "node scripts/zrzuty.cjs",
+    "symulacja": "tsx symulacja/run.ts"
   },
   "dependencies": {
     "@fastify/cookie": "^11.1.5",
