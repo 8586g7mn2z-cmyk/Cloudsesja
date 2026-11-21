@@ -194,8 +194,12 @@ export async function contractorRoutes(app: FastifyInstance, ctx: Ctx) {
     const u = requireUser(req);
     if (!isManager(u)) throw forbidden('Usuwać kontrahentów może kierownik lub administrator.');
     const id = Number((req.params as any).id);
+    // Zadania utworzone automatycznie przez reguły, których nikt jeszcze nie ruszył, nie blokują usunięcia
+    // (inaczej świeżo dodanego kontrahenta nie dałoby się usunąć) — znikają razem z kontrahentem.
+    const untouched = `rule_id IS NOT NULL AND progress = 0 AND done_at IS NULL AND updated_at IS NULL
+      AND NOT EXISTS (SELECT 1 FROM time_entries e WHERE e.task_id = tasks.id) AND NOT EXISTS (SELECT 1 FROM attachments a WHERE a.owner_type = 'task' AND a.owner_id = tasks.id)`;
     const rel = db.get<any>(
-      `SELECT (SELECT COUNT(*) FROM correspondence WHERE contractor_id = ?) + (SELECT COUNT(*) FROM tasks WHERE contractor_id = ?) +
+      `SELECT (SELECT COUNT(*) FROM correspondence WHERE contractor_id = ?) + (SELECT COUNT(*) FROM tasks WHERE contractor_id = ? AND NOT (${untouched})) +
               (SELECT COUNT(*) FROM orders WHERE contractor_id = ?) + (SELECT COUNT(*) FROM sales WHERE contractor_id = ?) +
               (SELECT COUNT(*) FROM documents WHERE contractor_id = ?) + (SELECT COUNT(*) FROM projects WHERE contractor_id = ?) AS n`,
       id, id, id, id, id, id,
@@ -205,6 +209,8 @@ export async function contractorRoutes(app: FastifyInstance, ctx: Ctx) {
       db.run('UPDATE contractors SET referred_by_id = NULL WHERE referred_by_id = ?', id);
       db.run('UPDATE contractors SET headquarters_id = NULL WHERE headquarters_id = ?', id);
       db.run("DELETE FROM attachments WHERE owner_type = 'contractor' AND owner_id = ?", id);
+      db.run('UPDATE internal_messages SET task_id = NULL WHERE task_id IN (SELECT id FROM tasks WHERE contractor_id = ?)', id);
+      db.run('DELETE FROM tasks WHERE contractor_id = ?', id);
       db.run('DELETE FROM contractors WHERE id = ?', id);
       audit(db, u.id, 'contractor', id, 'usunięcie');
     });
@@ -214,6 +220,7 @@ export async function contractorRoutes(app: FastifyInstance, ctx: Ctx) {
   // ---------- Adresy ----------
   const addrData = (b: any) => {
     if (!['korespondencyjny', 'dostawy', 'inny'].includes(b.kind)) throw bad('Wybierz rodzaj adresu.');
+    if (!str(b.street) && !str(b.city) && !str(b.postal_code)) throw bad('Podaj ulicę, kod pocztowy lub miasto.');
     return { kind: b.kind, street: str(b.street), postal_code: str(b.postal_code), city: str(b.city), voivodeship: str(b.voivodeship), country: str(b.country), notes: str(b.notes) };
   };
   app.post('/api/contractors/:id/addresses', async (req) => {

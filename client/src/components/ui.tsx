@@ -25,6 +25,19 @@ export function Modal({
   className?: string;
 }) {
   const ref = useRef<HTMLFormElement>(null);
+  // Blokada na czas zapisu: drugi klik „Zapisz" (lub Enter) nie wysyła formularza ponownie.
+  const saving = useRef(false);
+  const submit = () => {
+    if (!onSubmit || saving.current) return;
+    const r: unknown = (onSubmit as () => unknown)();
+    if (r && typeof (r as Promise<unknown>).then === 'function') {
+      saving.current = true;
+      (r as Promise<unknown>).then(
+        () => (saving.current = false),
+        () => (saving.current = false),
+      );
+    }
+  };
   const closeRef = useRef(onClose);
   closeRef.current = onClose;
   // fokus w pierwszym polu (także gdy treść okna wczyta się później)
@@ -56,7 +69,8 @@ export function Modal({
     };
   }, []);
   return createPortal(
-    <div className="overlay" onMouseDown={onClose}>
+    // Okno z formularzem nie zamyka się kliknięciem w tło (łatwo tak stracić wpisane dane); zamyka je przycisk lub Esc.
+    <div className="overlay" onMouseDown={onSubmit ? undefined : onClose}>
       <form
         ref={ref}
         className={`modal ${className ?? ''}`}
@@ -65,12 +79,12 @@ export function Modal({
         onSubmit={(e) => {
           e.preventDefault();
           e.stopPropagation();
-          onSubmit?.();
+          submit();
         }}
         onKeyDown={(e) => {
           if (e.key === 'Enter' && (e.ctrlKey || e.metaKey) && onSubmit) {
             e.preventDefault();
-            onSubmit();
+            submit();
           }
         }}
       >
@@ -84,6 +98,47 @@ export function Modal({
         <div className="modal-body">{children}</div>
         {footer && <div className="modal-foot">{footer}</div>}
       </form>
+    </div>,
+    document.body,
+  );
+}
+
+/** Pytanie o potwierdzenie; zawsze nad otwartym formularzem. */
+export function ConfirmDialog({ text, ok, danger, onAnswer }: { text: ReactNode; ok: string; danger?: boolean; onAnswer: (v: boolean) => void }) {
+  const answer = useRef(onAnswer);
+  answer.current = onAnswer;
+  useEffect(() => {
+    const me = {};
+    modalStack.push(me);
+    const h = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && modalStack[modalStack.length - 1] === me) {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        answer.current(false);
+      }
+    };
+    document.addEventListener('keydown', h, true);
+    return () => {
+      document.removeEventListener('keydown', h, true);
+      modalStack.splice(modalStack.indexOf(me), 1);
+    };
+  }, []);
+  return createPortal(
+    <div className="overlay confirm" onMouseDown={() => onAnswer(false)}>
+      <div className="modal" style={{ width: 420 }} role="alertdialog" aria-label="Potwierdzenie" onMouseDown={(e) => e.stopPropagation()}>
+        <div className="modal-head">
+          <h2>Potwierdzenie</h2>
+        </div>
+        <div className="modal-body">{text}</div>
+        <div className="modal-foot">
+          <button type="button" className="btn" onClick={() => onAnswer(false)}>
+            Anuluj
+          </button>
+          <button type="button" autoFocus className={`btn ${danger ? 'danger' : 'primary'}`} onClick={() => onAnswer(true)}>
+            {ok}
+          </button>
+        </div>
+      </div>
     </div>,
     document.body,
   );
@@ -307,8 +362,9 @@ export function useOutside(ref: React.RefObject<HTMLElement | null>, fn: () => v
     const h = (e: MouseEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) fn();
     };
-    document.addEventListener('mousedown', h);
-    return () => document.removeEventListener('mousedown', h);
+    // faza przechwytywania: okna dialogowe zatrzymują propagację kliknięć, a lista ma się zamknąć także w nich
+    document.addEventListener('mousedown', h, true);
+    return () => document.removeEventListener('mousedown', h, true);
   }, [ref, fn]);
 }
 
@@ -340,13 +396,16 @@ export function Combo({ items, value, onChange, placeholder = 'wpisz, aby wyszuk
           className={`input ${invalid ? 'invalid' : ''}`}
           placeholder={placeholder}
           value={q ?? sel?.label ?? ''}
-          onFocus={() => setQ(q ?? '')}
+          onMouseDown={() => setQ(q ?? '')}
           onChange={(e) => {
             setQ(e.target.value);
             setHi(0);
           }}
           onKeyDown={(e) => {
-            if (q === null) return;
+            if (q === null) {
+              if (e.key === 'ArrowDown') (e.preventDefault(), setQ(''));
+              return;
+            }
             if (e.key === 'ArrowDown') (e.preventDefault(), setHi(Math.min(list.length - 1, hi + 1)));
             else if (e.key === 'ArrowUp') (e.preventDefault(), setHi(Math.max(0, hi - 1)));
             else if (e.key === 'Enter' && list[hi]) {

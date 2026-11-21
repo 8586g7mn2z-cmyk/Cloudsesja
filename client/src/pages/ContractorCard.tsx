@@ -151,7 +151,7 @@ export function ContractorCard() {
     } catch (e: any) {
       if (e.status === 409) {
         setDupConfirm(true);
-        setError(`${e.message} Kliknij „Zapisz” ponownie, aby zapisać mimo to.`);
+        setError(`${String(e.message).replace(/\.+$/, '')}. Kliknij „Zapisz” ponownie, aby zapisać mimo to.`);
       } else setError(e.message);
     }
   };
@@ -168,11 +168,13 @@ export function ContractorCard() {
   };
   const addNote = async () => {
     if (!noteText.trim()) return;
+    const body = noteText;
+    setNoteText(''); // od razu, żeby drugi klik nie dodał tej samej notatki ponownie
     try {
-      await post(`/api/contractors/${id}/notes`, { body: noteText, kind: noteKind });
-      setNoteText('');
+      await post(`/api/contractors/${id}/notes`, { body, kind: noteKind });
       notes.reload();
     } catch (e: any) {
+      setNoteText(body);
       toast(e.message, 'error');
     }
   };

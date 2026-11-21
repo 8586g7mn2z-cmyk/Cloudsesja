@@ -71,7 +71,7 @@ export function NewContractorDialog({ onClose, onSaved }: { onClose: () => void;
     } catch (e: any) {
       if (e.status === 409) {
         setDupConfirm(true);
-        setError(`${e.message} Kliknij „Zapisz” ponownie, aby mimo to dodać kontrahenta.`);
+        setError(`${String(e.message).replace(/\.+$/, '')}. Kliknij „Zapisz” ponownie, aby mimo to dodać kontrahenta.`);
       } else setError(e.message);
     }
   };

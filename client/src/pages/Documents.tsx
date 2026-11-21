@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Plus, Upload, Eye, Download, Shield, Pencil, Archive, Trash2, FolderPlus, History, FileStack } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { del, get, post, put, upload } from '../lib/api';
@@ -222,6 +222,10 @@ export function DocumentsPage() {
   const [folderPerm, setFolderPerm] = useState<number | null>(null);
   const [newFolder, setNewFolder] = useState<string | null>(null);
   const rows = useMemo(() => (list.data ?? []).filter((d) => !folder || d.folder_id === folder), [list.data, folder]);
+  // panel boczny znika, gdy wybrany dokument przestał istnieć na liście (np. został usunięty)
+  useEffect(() => {
+    if (sel && list.data && !list.data.some((d) => d.id === sel.id)) setSel(null);
+  }, [list.data]);
   const reload = () => (list.reload(), folders.reload());
   return (
     <div className="page">

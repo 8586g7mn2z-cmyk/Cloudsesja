@@ -112,3 +112,63 @@ test('główna ścieżka pracy operatora', async ({ page }) => {
 
   expect(errors).toEqual([]);
 });
+
+// Regresje z audytu interfejsu: potwierdzenie usunięcia nad formularzem, brak duplikatów po dwukliku „Zapisz",
+// formularz nie znika po kliknięciu w tło, samouczek.
+test('okna dialogowe, podwójny zapis i samouczek', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  await page.goto('/');
+  await page.fill('#login', 'admin');
+  await page.fill('#password', 'Diagnos2026');
+  await page.click('button:has-text("Zaloguj")');
+  await expect(page.getByRole('heading', { name: 'Moje zadania na dziś' })).toBeVisible();
+
+  // samouczek: zaproszenie przy pierwszym wejściu, przejście kilku kroków, zamknięcie klawiszem Esc
+  const tour = page.getByRole('dialog', { name: 'Samouczek' });
+  await expect(page.locator('.tour-invite')).toBeVisible();
+  await page.getByRole('button', { name: 'Uruchom samouczek' }).click();
+  await expect(tour.getByText('Krok 1 z 17')).toBeVisible();
+  for (let i = 0; i < 5; i++) await tour.getByRole('button', { name: 'Dalej' }).click();
+  await expect(tour.getByRole('heading', { name: 'Panel grupowania' })).toBeVisible();
+  await expect(page).toHaveURL(/\/kontrahenci$/);
+  await expect(page.locator('.tour-hole')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(tour).toHaveCount(0);
+
+  // dwuklik „Zapisz" wysyła formularz tylko raz
+  let posts = 0;
+  page.on('request', (r) => {
+    if (r.method() === 'POST' && r.url().endsWith('/api/projects')) posts++;
+  });
+  await page.getByRole('link', { name: 'Projekty' }).click();
+  await page.getByRole('button', { name: 'Nowy projekt' }).click();
+  const modal = page.locator('.modal');
+  await modal.locator('.modal-body input').first().fill('Projekt po dwukliku');
+  // kliknięcie w tło nie zamyka formularza i nie gubi danych
+  await page.mouse.click(5, 400);
+  await expect(modal.locator('.modal-body input').first()).toHaveValue('Projekt po dwukliku');
+  await modal.getByRole('button', { name: 'Zapisz' }).dblclick();
+  await page.waitForLoadState('networkidle');
+  expect(posts).toBe(1);
+
+  // usunięcie z okna formularza: pytanie o potwierdzenie jest nad formularzem i daje się kliknąć
+  await page.getByRole('link', { name: 'Rejestr zadań' }).click();
+  await page.locator('.dt-row').filter({ hasText: 'Przygotować ofertę na DIAG-200' }).dblclick();
+  await page.locator('.modal').getByRole('button', { name: 'Usuń' }).click();
+  const confirm = page.getByRole('alertdialog', { name: 'Potwierdzenie' });
+  await expect(confirm).toBeVisible();
+  await confirm.getByRole('button', { name: 'Usuń' }).click();
+  await expect(page.locator('.dt-row').filter({ hasText: 'Przygotować ofertę na DIAG-200' })).toHaveCount(0);
+
+  // słowniki: dodanie podgrupy
+  await page.goto('/ustawienia');
+  await page.getByRole('tab', { name: 'Słowniki' }).click();
+  await page.getByText('Grupy i podgrupy kontrahentów').first().click();
+  await page.locator('select', { hasText: 'grupa nadrzędna…' }).selectOption({ label: 'Handel' });
+  await page.fill('#sub-name', 'Dystrybucja');
+  await page.getByRole('button', { name: 'Dodaj podgrupę' }).click();
+  await expect(page.getByText('Dystrybucja')).toBeVisible();
+
+  expect(errors).toEqual([]);
+});

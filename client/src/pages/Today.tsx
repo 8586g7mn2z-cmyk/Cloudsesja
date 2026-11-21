@@ -35,8 +35,9 @@ export function TodayPage() {
   };
   const addNote = async () => {
     if (!note.trim()) return;
-    await post('/api/quick-notes', { body: note }).catch((e) => toast(e.message, 'error'));
-    setNote('');
+    const body = note;
+    setNote(''); // od razu, żeby drugi klik lub Enter nie dodał notatki ponownie
+    await post('/api/quick-notes', { body }).catch((e) => (setNote(body), toast(e.message, 'error')));
     notes.reload();
   };
   return (

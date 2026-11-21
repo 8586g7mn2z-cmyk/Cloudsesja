@@ -109,7 +109,16 @@ function Notifications({ onCount }: { onCount: (n: { messages: number; outbox: n
   const { toast } = useApp();
   const [data, setData] = useState<any>(null);
   const [openTask, setOpenTask] = useState<number | null>(null);
-  const seen = useRef<Set<number>>(new Set());
+  // lista wiadomości, o których już powiadomiono, przeżywa przeładowanie strony (do końca sesji przeglądarki)
+  const seen = useRef<Set<number>>(
+    (() => {
+      try {
+        return new Set<number>(JSON.parse(sessionStorage.getItem('diagnos.powiadomione') ?? '[]'));
+      } catch {
+        return new Set<number>();
+      }
+    })(),
+  );
   const load = async () => {
     try {
       const d = await get('/api/notifications');
@@ -118,6 +127,11 @@ function Notifications({ onCount }: { onCount: (n: { messages: number; outbox: n
       for (const m of d.messages) {
         if (!seen.current.has(m.id)) {
           seen.current.add(m.id);
+          try {
+            sessionStorage.setItem('diagnos.powiadomione', JSON.stringify([...seen.current].slice(-500)));
+          } catch {
+            /* pamięć przeglądarki niedostępna */
+          }
           toast(`Nowa wiadomość od ${m.sender}: ${m.subject}`, 'info');
         }
       }
@@ -211,7 +225,7 @@ const NAV: { sec: string; items: { to: string; label: string; icon: any; manager
   { sec: 'Narzędzia', items: [
     { to: '/import', label: 'Import danych', icon: Upload, manager: true },
     { to: '/kolejka', label: 'Kolejka wysyłki', icon: Send },
-    { to: '/ustawienia', label: 'Ustawienia', icon: Settings },
+    { to: '/ustawienia', label: 'Ustawienia', icon: Settings, admin: true },
   ] },
 ];
 
@@ -220,7 +234,7 @@ function Layout() {
   const nav = useNavigate();
   const [counts, setCounts] = useState({ messages: 0, outbox: 0 });
   const [pw, setPw] = useState(false);
-  const { isManager } = useApp();
+  const { isManager, isAdmin } = useApp();
   const [tour, setTour] = useState(false);
   const [invite, setInvite] = useState(() => !!user && !tourSeen(user.id));
   const closeInvite = () => {
@@ -264,7 +278,7 @@ function Layout() {
         {NAV.map((s) => (
           <div key={s.sec}>
             <div className="nav-sec">{s.sec}</div>
-            {s.items.map((i) => (
+            {s.items.filter((i) => (!i.manager || isManager) && (!i.admin || isAdmin)).map((i) => (
               <NavLink key={i.to} to={i.to} end={i.to === '/'} className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
                 <i.icon size={15} /> {i.label}
               </NavLink>
@@ -299,7 +313,7 @@ function Layout() {
       </main>
       <Notifications onCount={setCounts} />
       {pw && <ChangePasswordDialog onClose={() => setPw(false)} />}
-      {tour && <Tour isManager={isManager} onClose={() => setTour(false)} />}
+      {tour && <Tour isAdmin={isAdmin} onClose={() => setTour(false)} />}
       {invite && !tour && <TourInvite onStart={() => (closeInvite(), setTour(true))} onDismiss={closeInvite} />}
     </div>
   );

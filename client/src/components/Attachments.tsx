@@ -123,7 +123,7 @@ export function Attachments({ ownerType, ownerId, items, onChange, allowToDocume
     setBusy(true);
     try {
       await upload(`/api/attachments/${ownerType}/${ownerId}`, files);
-      toast(files.length > 1 ? `Dodano ${files.length} pliki.` : 'Dodano plik.');
+      toast(files.length > 1 ? `Dodano pliki: ${files.length}.` : 'Dodano plik.');
       onChange();
     } catch (e: any) {
       toast(e.message, 'error');

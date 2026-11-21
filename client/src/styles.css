@@ -348,3 +348,5 @@ table.grid input.input, table.grid select.select { height: 24px; }
 .tour-invite .row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .tour-invite p { margin: 6px 0 8px; color: var(--text-2); line-height: 1.4; }
 @media print { .tour, .tour-invite { display: none; } }
+
+.overlay.confirm { z-index: 250; }

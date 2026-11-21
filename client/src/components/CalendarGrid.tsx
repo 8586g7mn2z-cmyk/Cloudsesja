@@ -57,10 +57,15 @@ export function CalendarGrid({
     let s = startHour;
     let e = endHour;
     for (const t of tasks) {
-      if (!days.includes(t.start_at.slice(0, 10))) continue;
-      s = Math.min(s, parseIso(t.start_at).getHours());
-      const end = parseIso(t.end_at);
-      if (t.end_at.slice(0, 10) === t.start_at.slice(0, 10)) e = Math.max(e, end.getHours() + (end.getMinutes() ? 1 : 0));
+      const sd = t.start_at.slice(0, 10);
+      const ed = t.end_at.slice(0, 10);
+      for (const d of days) {
+        if (sd > d || ed < d) continue;
+        // zadanie przechodzące przez północ zajmuje dzień do końca (24:00) i następny od początku (0:00)
+        s = Math.min(s, sd < d ? 0 : parseIso(t.start_at).getHours());
+        const end = parseIso(t.end_at);
+        e = Math.max(e, ed > d ? 24 : end.getHours() + (end.getMinutes() ? 1 : 0));
+      }
     }
     return { s, e: Math.min(24, e) };
   }, [tasks, days, startHour, endHour]);

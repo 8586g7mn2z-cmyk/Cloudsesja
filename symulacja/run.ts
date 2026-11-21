@@ -75,7 +75,12 @@ const M = {
 };
 const bump = (k: string, n = 1) => (M.counters[k] = (M.counters[k] ?? 0) + n);
 const expectEmail = (to: string, subject: string, n = 1) => M.emails.set(`${to}|${subject}`, (M.emails.get(`${to}|${subject}`) ?? 0) + n);
-const expectSms = (to: string, text: string, n = 1) => M.sms.set(`${to}|${text}`, (M.sms.get(`${to}|${text}`) ?? 0) + n);
+/** Numer w postaci, w jakiej powinien trafić do bramki: same cyfry z prefiksem kraju. */
+const gatewayNumber = (v: string) => {
+  const d = v.replace(/\D/g, '');
+  return d.length === 9 ? `48${d}` : d;
+};
+const expectSms = (to: string, text: string, n = 1) => M.sms.set(`${gatewayNumber(to)}|${text}`, (M.sms.get(`${gatewayNumber(to)}|${text}`) ?? 0) + n);
 const note = (s: string) => M.log.push(`${simNow.replace('T', ' ').slice(0, 16)}  ${s}`);
 
 // ---------- Środowisko ----------
@@ -940,12 +945,21 @@ function planScenario() {
   at(6, '14:00', 'kierownik usuwa pustego kontrahenta i dezaktywuje innego', async () => {
     const co = makeCompany(rng);
     const r = await kier.post('/api/contractors', { name: co.name, short_name: co.short_name, owner_id: kier.id });
-    const t = ((await admin.get(`/api/tasks?contractor_id=${r.id}&archived=1`)) ?? [])[0];
-    const stillBlocked = await kier.raw('DELETE', `/api/contractors/${r.id}`);
-    C.check('Kontrahenci', 'kontrahent z zadaniem (choćby automatycznym) nie daje się usunąć', stillBlocked.status === 409, `→ ${stillBlocked.status}`);
-    if (t) await kier.del(`/api/tasks/${t.id}`);
+    const before = ((await admin.get('/api/tasks?archived=1')) ?? []).length;
     const del = await kier.raw('DELETE', `/api/contractors/${r.id}`);
-    C.check('Kontrahenci', 'kontrahent bez powiązań daje się usunąć', del.status === 200, `→ ${del.status}`);
+    const after = ((await admin.get('/api/tasks?archived=1')) ?? []).length;
+    C.check('Kontrahenci', 'świeżo dodany kontrahent daje się usunąć, a jego nietknięte zadanie automatyczne znika razem z nim', del.status === 200 && after === before - 1, `→ ${del.status}, zadań ${before} → ${after}`);
+    // kontrahent, przy którym ktoś już pracował nad zadaniem, zostaje
+    const co2 = makeCompany(rng);
+    const r2 = await kier.post('/api/contractors', { name: co2.name, short_name: co2.short_name, owner_id: kier.id });
+    M.contractors.set(r2.id, { id: r2.id, name: co2.name, short: co2.short_name, city: '', ownerId: kier.id, email: null, active: true, isKey: false, groupId: null, statusId: null, contacts: [] });
+    await expectRuleTask(kier, r2.id, kier.id);
+    const t2 = [...M.tasks.values()].find((t) => t.contractorId === r2.id)!;
+    await kier.patch(`/api/tasks/${t2.id}/progress`, { progress: 20 });
+    t2.progress = 20;
+    t2.status = 'in_progress';
+    const blocked = await kier.raw('DELETE', `/api/contractors/${r2.id}`);
+    C.check('Kontrahenci', 'kontrahent z rozpoczętym zadaniem nie daje się usunąć', blocked.status === 409, `→ ${blocked.status}`);
     const victim = [...M.contractors.values()].find((c) => c.active && c.ownerId === kier.id) ?? [...M.contractors.values()][0];
     await kier.put(`/api/contractors/${victim.id}`, { active: false });
     victim.active = false;

@@ -10,8 +10,8 @@ interface Step {
   target?: string;
   title: string;
   text: string;
-  /** Krok tylko dla kierownika i administratora. */
-  manager?: boolean;
+  /** Krok tylko dla administratora. */
+  admin?: boolean;
 }
 
 const STEPS: Step[] = [
@@ -30,7 +30,7 @@ const STEPS: Step[] = [
   { route: '/wiadomosci', target: '.main', title: 'Korespondencja wewnętrzna', text: 'Wiadomości między operatorami. Przy wysyłaniu możesz podać termin doręczenia, wtedy adresat zobaczy wiadomość dopiero o tej porze. Nieprzeczytane wiadomości sygnalizuje dzwonek w górnym pasku.' },
   { route: '/dokumenty', target: '.main', title: 'Rejestr dokumentów', text: 'Wirtualna szafa firmy: segregatory po lewej, dokumenty po prawej. Każdy dokument ma wersje, okres ważności i historię zmian, a dostęp nadaje się działom lub poszczególnym osobom. Oferty, zamówienia i pro formy powstają z szablonów jako gotowe pliki PDF.' },
   { route: '/raporty', target: '.main', title: 'Raporty', text: 'Brak aktywności, skuteczność handlowców, statystyka zadań, aktywność operatora i czas pracy. Każdy raport można wydrukować, zapisać do PDF lub XLSX, a także ustawić automatyczną wysyłkę e-mailem, np. ostatniego dnia miesiąca.' },
-  { route: '/ustawienia', target: '.main', title: 'Ustawienia', text: 'Operatorzy i działy, słowniki, własne pola dodatkowe kontrahenta, reguły zadań automatycznych, konfiguracja poczty i SMS oraz dane firmy używane w szablonach dokumentów.', manager: true },
+  { route: '/ustawienia', target: '.main', title: 'Ustawienia', text: 'Operatorzy i działy, słowniki, własne pola dodatkowe kontrahenta, reguły zadań automatycznych, konfiguracja poczty i SMS oraz dane firmy używane w szablonach dokumentów.', admin: true },
   { route: '/', title: 'To wszystko', text: 'Znasz już najważniejsze miejsca w panelu. Samouczek możesz uruchomić ponownie w każdej chwili przyciskiem „Samouczek” w górnym pasku.' },
 ];
 
@@ -57,8 +57,8 @@ interface Rect {
   height: number;
 }
 
-export function Tour({ isManager, onClose }: { isManager: boolean; onClose: () => void }) {
-  const steps = STEPS.filter((s) => !s.manager || isManager);
+export function Tour({ isAdmin, onClose }: { isAdmin: boolean; onClose: () => void }) {
+  const steps = STEPS.filter((s) => !s.admin || isAdmin);
   const [i, setI] = useState(0);
   const [rect, setRect] = useState<Rect | null>(null);
   const nav = useNavigate();

@@ -69,7 +69,7 @@ function ScheduleForm({ s, reports, periods, freqs, onClose, onSaved }: any) {
 }
 
 function Schedules() {
-  const { toast, status } = useApp();
+  const { toast, status, confirm } = useApp();
   const meta = useApi<any>('/api/reports');
   const list = useApi<any[]>('/api/report-schedules');
   const [form, setForm] = useState<any>(null);
@@ -97,7 +97,7 @@ function Schedules() {
               <td className="nowrap">
                 <button className="btn sm" onClick={() => run(s)} title="Wygeneruj i wyślij teraz"><Play size={12} /> Uruchom teraz</button>
                 <button className="btn sm ghost" onClick={() => setForm(s)}>Edytuj</button>
-                <button className="btn sm ghost danger" onClick={async () => { await del(`/api/report-schedules/${s.id}`); list.reload(); }}><Trash2 size={12} /></button>
+                <button className="btn sm ghost danger" title="Usuń harmonogram" onClick={async () => { if (await confirm(`Usunąć harmonogram „${s.name}”?`, { ok: 'Usuń', danger: true })) { await del(`/api/report-schedules/${s.id}`); list.reload(); } }}><Trash2 size={12} /></button>
               </td>
             </tr>
           ))}

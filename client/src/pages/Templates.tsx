@@ -55,7 +55,7 @@ export function GenerateDialog({ contractorId, orderId, onClose, onDone }: { con
         <label className="lbl req">Kontrahent</label>
         <ContractorPicker value={v.contractor_id} onChange={(c) => setV((p: any) => ({ ...p, contractor_id: c, order_id: null }))} />
         <label className="lbl">Zamówienie</label>
-        <Select value={v.order_id} onChange={set('order_id')} empty="(pozycje wprowadzone poniżej)" options={(orders.data ?? []).map((o) => ({ value: o.id, label: `${o.number} z ${o.order_date}` }))} />
+        <Select value={v.order_id} onChange={set('order_id')} empty="(pozycje wprowadzone poniżej)" options={(orders.data ?? []).map((o) => ({ value: o.id, label: `${o.number} z ${String(o.order_date).split('-').reverse().join('.')}` }))} />
         <label className="lbl">Ważny do</label>
         <Input type="date" value={v.valid_to} onChange={(e) => set('valid_to')(e.target.value)} />
       </div>
@@ -143,7 +143,7 @@ export function TemplatesPage() {
             <thead><tr><th>Nazwa</th><th>Rodzaj</th><th>Tytuł dokumentu</th><th>Segregator docelowy</th><th>Aktywny</th><th /></tr></thead>
             <tbody>
               {(d.data?.templates ?? []).map((t: any) => (
-                <tr key={t.id}><td>{t.name}</td><td>{t.kind}</td><td className="small">{t.title}</td><td>{t.folder_name}</td><td>{t.active ? 'tak' : 'nie'}</td>
+                <tr key={t.id}><td>{t.name}</td><td>{({ oferta: 'oferta', zamowienie: 'zamówienie', proforma: 'faktura pro forma', inny: 'inny' } as Record<string, string>)[t.kind] ?? t.kind}</td><td className="small">{t.title}</td><td>{t.folder_name}</td><td>{t.active ? 'tak' : 'nie'}</td>
                   <td>{isManager && <button className="btn sm" onClick={() => setForm(t)}>Edytuj</button>}</td></tr>
               ))}
             </tbody>

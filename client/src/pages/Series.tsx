@@ -30,8 +30,9 @@ function SeriesForm({ s, onClose, onSaved }: { s?: any; onClose: () => void; onS
       if (s) await put(`/api/task-series/${s.id}`, v);
       else {
         const r = await post('/api/task-series', v);
-        toast(`Utworzono zadanie cykliczne; zaplanowano ${r.generated} wystąpień na najbliższe 60 dni.`);
+        toast(`Utworzono zadanie cykliczne; liczba zaplanowanych wystąpień na najbliższe 60 dni: ${r.generated}.`);
       }
+      if (s) toast('Zapisano zadanie cykliczne.');
       onSaved();
     } catch (e: any) {
       setError(e.message);

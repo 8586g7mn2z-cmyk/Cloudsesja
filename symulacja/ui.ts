@@ -142,7 +142,7 @@ export async function runUi(o: UiOptions) {
             await settle();
           }
           // tabela renderuje tylko widoczne wiersze, więc do zliczenia grup zwijamy je wszystkie
-          await page.getByRole('button', { name: 'Zwiń wszystko' }).click().catch(() => undefined);
+          await page.getByText('Zwiń wszystko', { exact: true }).click();
           await settle();
           const text = await page.locator('body').innerText();
           const groups = [...text.matchAll(/ilość:\s*(\d+)/g)].map((m) => Number(m[1]));

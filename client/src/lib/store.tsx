@@ -1,3 +1,4 @@
+import { ConfirmDialog } from '../components/ui';
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { get } from './api';
 
@@ -148,31 +149,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           </div>
         ))}
       </div>
-      {confirmState && (
-        <div className="overlay" onMouseDown={() => (confirmState.resolve(false), setConfirmState(null))}>
-          <div
-            className="modal"
-            style={{ width: 420 }}
-            onMouseDown={(e) => e.stopPropagation()}
-            onKeyDown={(e) => {
-              if (e.key === 'Escape') (confirmState.resolve(false), setConfirmState(null));
-            }}
-          >
-            <div className="modal-head">
-              <h2>Potwierdzenie</h2>
-            </div>
-            <div className="modal-body">{confirmState.text}</div>
-            <div className="modal-foot">
-              <button className="btn" onClick={() => (confirmState.resolve(false), setConfirmState(null))}>
-                Anuluj
-              </button>
-              <button autoFocus className={`btn ${confirmState.danger ? 'danger' : 'primary'}`} onClick={() => (confirmState.resolve(true), setConfirmState(null))}>
-                {confirmState.ok}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {confirmState && <ConfirmDialog text={confirmState.text} ok={confirmState.ok} danger={confirmState.danger} onAnswer={(v) => (confirmState.resolve(v), setConfirmState(null))} />}
     </AppCtx.Provider>
   );
 }

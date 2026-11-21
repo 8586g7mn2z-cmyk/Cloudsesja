@@ -247,7 +247,8 @@ export async function templatePdf(ctx: Ctx, body: string, items: DocItem[]): Pro
   const doc = newDoc(false);
   const hdr = () => header(ctx, doc);
   hdr();
-  const lines = body.split(/\r?\n/);
+  // znacznik tabeli pozycji zawsze trafia do osobnego wiersza, także gdy w szablonie stoi w środku zdania
+  const lines = body.replace(/[ \t]*\[\[POZYCJE\]\][ \t]*/g, '\n[[POZYCJE]]\n').split(/\r?\n/);
   for (const line of lines) {
     if (line.startsWith('# ')) {
       doc.font('bold').fontSize(15).fillColor(NAVY).text(line.slice(2), { align: 'left' });

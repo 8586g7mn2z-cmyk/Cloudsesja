@@ -91,6 +91,7 @@ export async function businessRoutes(app: FastifyInstance, ctx: Ctx) {
     const keep: number[] = [];
     stages.forEach((s, i) => {
       if (!str(s.name)) return;
+      if (str(s.start_date) && str(s.end_date) && s.end_date < s.start_date) throw bad(`Etap „${str(s.name)}”: termin zakończenia jest wcześniejszy niż rozpoczęcia.`);
       const d = { name: str(s.name), start_date: str(s.start_date), end_date: str(s.end_date), status: ['planowany', 'w toku', 'zakończony'].includes(s.status) ? s.status : 'planowany', sort: i };
       if (toInt(s.id)) {
         db.update('project_stages', toInt(s.id)!, d);
@@ -287,6 +288,8 @@ export async function businessRoutes(app: FastifyInstance, ctx: Ctx) {
       if (!isManager(u)) d.operator_id = cur.operator_id;
     } else if (!isManager(u)) d.operator_id = u.id;
     const its = items(ctx, b.items);
+    const dup = db.get<any>('SELECT id FROM sales WHERE doc_number = ? AND contractor_id = ? AND id <> ?', d.doc_number, d.contractor_id, id ?? 0);
+    if (dup) throw bad(`Dokument sprzedaży ${d.doc_number} dla tego kontrahenta już istnieje.`);
     return db.tx(() => {
       let net = toNum(b.net_total);
       let gross = toNum(b.gross_total);

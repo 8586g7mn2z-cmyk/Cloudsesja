@@ -262,7 +262,7 @@ async function runOutbox(ctx: Ctx, limit: number, onlyId?: number): Promise<numb
             attachments: it.attachments ? JSON.parse(it.attachments) : [],
           });
         } else {
-          const r = await smsAdapter(ctx).send(it.recipient, it.body_text ?? '');
+          const r = await smsAdapter(ctx).send(normalizePhone(it.recipient), it.body_text ?? '');
           if (!r.ok) throw new Error(r.info);
         }
         setStatus(ctx, it.id, 'sent', null, { sent_at: nowIso() });
@@ -297,4 +297,13 @@ export function textToHtml(s: string): string {
 /** Po restarcie serwera: pozycje przerwane w trakcie wysyłania wracają do kolejki. */
 export function recoverOutbox(ctx: Ctx): number {
   return ctx.db.run("UPDATE outbox SET status = 'queued', send_after = NULL WHERE status = 'sending'").changes as number;
+}
+
+/** Numer telefonu w postaci przyjmowanej przez bramki: same cyfry z prefiksem kraju (domyślnie 48), np. 48601602603. */
+export function normalizePhone(v: string): string {
+  let d = String(v ?? '').replace(/[^\d+]/g, '');
+  if (d.startsWith('+')) d = d.slice(1);
+  else if (d.startsWith('00')) d = d.slice(2);
+  else if (d.length === 9) d = '48' + d;
+  return d.replace(/\D/g, '');
 }

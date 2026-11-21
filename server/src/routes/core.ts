@@ -18,7 +18,7 @@ import {
 } from '../auth.js';
 import { audit, bad, forbidden, isValidEmail, notFound, nowIso, str, toInt } from '../util.js';
 import { dictLabels } from '../migrations.js';
-import { defaultSms, defaultSmtp, isSmtpConfigured, processOutbox, retryOutbox, cancelOutbox, sendMailNow, smsAdapter, smsSettings, smtpSettings, OUTBOX_LABELS } from '../services/messaging.js';
+import { defaultSms, defaultSmtp, isSmtpConfigured, processOutbox, retryOutbox, cancelOutbox, sendMailNow, smsAdapter, smsSettings, smtpSettings, OUTBOX_LABELS, normalizePhone } from '../services/messaging.js';
 import { defaultCompany } from '../services/pdf.js';
 import { contentDisposition, filePath, getFile, saveFile } from '../services/files.js';
 
@@ -229,6 +229,8 @@ export async function coreRoutes(app: FastifyInstance, ctx: Ctx) {
     if (!['text', 'number', 'date', 'select', 'bool'].includes(b.type)) throw bad('Wybierz typ pola.');
     const options = b.type === 'select' ? (Array.isArray(b.options) ? b.options : String(b.options ?? '').split('\n')).map((s: string) => s.trim()).filter(Boolean) : [];
     if (b.type === 'select' && !options.length) throw bad('Lista wyboru wymaga co najmniej jednej wartości.');
+    const same = db.all<any>("SELECT id, label FROM custom_fields WHERE entity = 'contractor'").find((f) => f.id !== id && f.label.trim().toLocaleLowerCase('pl') === label.toLocaleLowerCase('pl'));
+    if (same) throw bad('Pole dodatkowe o tej nazwie już istnieje.');
     if (id) {
       db.update('custom_fields', id, { label, type: b.type, options: JSON.stringify(options), sort: toInt(b.sort) ?? 0, active: b.active === false ? 0 : 1 });
       return id;
@@ -358,7 +360,7 @@ export async function coreRoutes(app: FastifyInstance, ctx: Ctx) {
     const a = smsAdapter(ctx);
     if (!a.configured) throw bad('Bramka SMS nie jest skonfigurowana.');
     try {
-      const r = await a.send(to, 'DIAGNOS CRM: wiadomość testowa.');
+      const r = await a.send(normalizePhone(to), 'DIAGNOS CRM: wiadomość testowa.');
       return { ok: r.ok, info: r.ok ? `Bramka przyjęła wiadomość. ${r.info}` : r.info };
     } catch (e: any) {
       return { ok: false, info: `Błąd połączenia z bramką: ${e?.message ?? e}` };

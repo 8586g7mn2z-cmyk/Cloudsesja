@@ -90,8 +90,14 @@ function Dictionaries() {
   const [name, setName] = useState('');
   const [parent, setParent] = useState<number | null>(null);
   const [edit, setEdit] = useState<any>(null);
+  const [subName, setSubName] = useState('');
   const items = dicts[dict] ?? [];
   const subs = dicts.contractor_subgroup ?? [];
+  const addSub = () => {
+    if (!parent || !subName.trim()) return;
+    add('contractor_subgroup', subName.trim(), parent);
+    setSubName('');
+  };
   const add = async (d: string, n: string, parentId?: number | null) => {
     try {
       await post(`/api/dicts/${d}`, { name: n, parent_id: parentId });
@@ -140,8 +146,8 @@ function Dictionaries() {
         {dict === 'contractor_group' && (
           <div className="row mt8">
             <Select value={parent} onChange={setParent} empty="grupa nadrzędna…" options={items.map((g) => ({ value: g.id, label: g.name }))} />
-            <Input id="sub-name" placeholder="Nowa podgrupa" onKeyDown={(e) => { const t = e.target as HTMLInputElement; if (e.key === 'Enter' && parent && t.value.trim()) { add('contractor_subgroup', t.value, parent); t.value = ''; } }} />
-            <span className="small muted">Enter dodaje podgrupę</span>
+            <Input id="sub-name" placeholder="Nowa podgrupa" value={subName} onChange={(e) => setSubName(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addSub(); } }} />
+            <button type="button" className="btn" disabled={!parent || !subName.trim()} onClick={addSub}>Dodaj podgrupę</button>
           </div>
         )}
         {(dict === 'task_status' || dict === 'corr_kind') && <p className="small muted mt8">Pozycje systemowe sterują logiką (np. „Zrealizowane” zamyka zadanie, „E-mail” umożliwia wysyłkę); można zmieniać ich nazwy, ale nie usuwać.</p>}
