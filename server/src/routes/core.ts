@@ -20,6 +20,7 @@ import { audit, bad, forbidden, isValidEmail, notFound, nowIso, str, toInt } fro
 import { dictLabels } from '../migrations.js';
 import { defaultSms, defaultSmtp, isSmtpConfigured, processOutbox, retryOutbox, cancelOutbox, sendMailNow, smsAdapter, smsSettings, smtpSettings, OUTBOX_LABELS, normalizePhone } from '../services/messaging.js';
 import { defaultCompany } from '../services/pdf.js';
+import { defaultModules } from './history.js';
 import { contentDisposition, filePath, getFile, saveFile } from '../services/files.js';
 
 const failures = new Map<string, { n: number; until: number }>();
@@ -288,7 +289,7 @@ export async function coreRoutes(app: FastifyInstance, ctx: Ctx) {
   });
   app.get('/api/settings/status', async () => {
     const sms = smsSettings(ctx);
-    return { smtp_configured: isSmtpConfigured(ctx), sms_configured: smsAdapter(ctx).configured, sms_provider: sms.provider };
+    return { smtp_configured: isSmtpConfigured(ctx), sms_configured: smsAdapter(ctx).configured, sms_provider: sms.provider, modules: getSetting(ctx, 'modules', defaultModules) };
   });
   app.get('/api/settings/smtp', async (req) => {
     requireRole(req, 'admin');

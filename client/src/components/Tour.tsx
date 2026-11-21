@@ -12,25 +12,30 @@ interface Step {
   text: string;
   /** Krok tylko dla administratora. */
   admin?: boolean;
+  /** Krok tylko przy włączonym module. */
+  module?: string;
 }
 
 const STEPS: Step[] = [
-  { route: '/', title: 'Witamy w panelu DIAGNOS', text: 'Ten samouczek w kilka minut pokaże, gdzie co jest i jak wygląda codzienna praca: kontrahenci, korespondencja, zadania, dokumenty i raporty. Możesz go przerwać w każdej chwili i wrócić do niego przyciskiem „Samouczek” w górnym pasku.' },
-  { route: '/', target: '.sidebar', title: 'Nawigacja', text: 'Menu po lewej jest podzielone na obszary pracy. „Praca” to Twoje zadania i kalendarz, „Kontrahenci” to baza firm i cała korespondencja, dalej handel, dokumenty, raporty i narzędzia.' },
+  { route: '/', title: 'Witamy w panelu DIAGNOS', text: 'Ten samouczek w kilka minut pokaże, gdzie co jest i jak wygląda codzienna praca: zapytania i przetargi, ich dokumentacja i historia, kontrahenci, korespondencja oraz zadania. Możesz go przerwać w każdej chwili i wrócić do niego przyciskiem „Samouczek” w górnym pasku.' },
+  { route: '/', target: '.sidebar', title: 'Nawigacja', text: 'Menu po lewej jest podzielone na obszary pracy. „Praca” to Twój plan dnia i kalendarz, „Sprawy” to zapytania i przetargi, kontrahenci oraz korespondencja, dalej dokumenty i raporty.' },
   { route: '/', target: '.topbar .search', title: 'Szybkie wyszukiwanie', text: 'Wpisz fragment nazwy, NIP, numer telefonu, adres e-mail albo nazwisko osoby kontaktowej. Wynik otwiera od razu kartotekę kontrahenta, z dowolnego ekranu.' },
-  { route: '/', target: '.main', title: 'Moje zadania na dziś', text: 'Ekran startowy: Twój plan dnia w siatce godzin. Dwuklik w wolne pole tworzy zadanie na tę godzinę, a zadanie można przeciągnąć na inną porę. Po prawej są mini-kalendarz, szybkie notatki oraz lista zadań zaległych i najbliższych.' },
-  { route: '/kontrahenci', target: '.dt-toolbar', title: 'Rejestr kontrahentów', text: 'Tu dodasz nowego kontrahenta i wczytasz bazę z pliku Excel lub CSV. Ikony po prawej to: filtry, wybór widocznych kolumn, eksport do CSV i XLSX oraz wydruk. Taki sam pasek ma każdy rejestr w systemie.' },
-  { route: '/kontrahenci', target: 'select[aria-label="Grupuj według"]', title: 'Panel grupowania', text: 'Wybierz kolumnę, a rejestr pogrupuje się według niej, z licznikami w nagłówkach grup. Możesz dodać kolejne poziomy, np. miasto, a w nim status. Grupowanie działa w każdym rejestrze i jest zapamiętywane.' },
+  { route: '/', target: '.main', title: 'Moje zadania na dziś', text: 'Ekran startowy: Twój plan dnia w siatce godzin. Dwuklik w wolne pole tworzy zadanie na tę godzinę. Po prawej są najbliższe terminy składania ofert, mini-kalendarz, szybkie notatki oraz zadania zaległe.' },
+  { route: '/projekty', target: '.dt-toolbar', title: 'Zapytania i przetargi', text: 'Tu rejestrujesz każde zapytanie ofertowe i każdy przetarg: przedmiot, zamawiającego, znak sprawy, datę wpływu i termin składania ofert. Po podaniu terminu opiekun dostaje zadanie z przypomnieniem dzień wcześniej.' },
+  { route: '/projekty', target: '.dt-filters', title: 'Co jest w toku, co pilne', text: 'Filtr „Pokaż” przełącza między sprawami w toku, tymi z terminem ofert w ciągu 14 dni i rozstrzygniętymi. Kolumna „Do terminu” pokazuje liczbę dni, a sprawy po terminie są wyróżnione kolorem.' },
+  { route: '/projekty', target: '.dt-body', title: 'Kartoteka sprawy', text: 'Dwuklik otwiera kartotekę zapytania lub przetargu. Zakładka „Dokumentacja” zbiera pliki sprawy (treść zapytania, specyfikację, ofertę) z wersjami. Zakładka „Historia” pokazuje po kolei wszystko, co się wydarzyło: korespondencję, zadania, dokumenty i zmiany statusu.' },
+  { route: '/projekty', target: 'select[aria-label="Grupuj według"]', title: 'Panel grupowania', text: 'Wybierz kolumnę, a rejestr pogrupuje się według niej, z licznikami w nagłówkach grup, np. według statusu, opiekuna albo zamawiającego. Możesz dodać kolejne poziomy. Grupowanie działa w każdym rejestrze i jest zapamiętywane.' },
+  { route: '/kontrahenci', target: '.dt-toolbar', title: 'Rejestr kontrahentów', text: 'Tu dodasz nowego kontrahenta. Ikony po prawej to: filtry, wybór widocznych kolumn, eksport do CSV i XLSX oraz wydruk. Taki sam pasek ma każdy rejestr w systemie.' },
   { route: '/kontrahenci', target: '.dt-frow', title: 'Filtry w kolumnach', text: 'Pod nagłówkiem każdej kolumny jest pole filtra: wpisz tekst albo wybierz wartość z listy. Kliknięcie nagłówka sortuje. Nad tabelą są filtry szczególne, m.in. „tylko kluczowi” i „bez kontaktu od”.' },
-  { route: '/kontrahenci', target: '.dt-body', title: 'Kartoteka kontrahenta', text: 'Pojedyncze kliknięcie pokazuje podgląd po prawej, dwuklik otwiera kartotekę. W zakładkach kartoteki jest wszystko o firmie: dane i adresy, osoby kontaktowe, korespondencja, zadania, projekty, zamówienia, sprzedaż, załączniki i notatki.' },
-  { route: '/korespondencja', target: '.dt-toolbar', title: 'Korespondencja', text: 'Każdy kontakt z klientem zapisujesz jako korespondencję: telefon, e-mail, SMS, spotkanie lub notatkę. Formularz sam mierzy czas rozmowy i nadaje numer. E-mail i SMS można wysłać prosto z formularza, a wysłana wiadomość zostaje w historii kontrahenta.' },
-  { route: '/korespondencja-seryjna', target: '.main', title: 'Korespondencja seryjna', text: 'Jedna wiadomość do całej grupy kontrahentów albo do wyniku filtra z rejestru. W treści możesz użyć pól takich jak nazwa firmy czy imię osoby; przed wysyłką zobaczysz podgląd, a po niej status dla każdego odbiorcy.' },
+  { route: '/kontrahenci', target: '.dt-body', title: 'Kartoteka kontrahenta', text: 'Pojedyncze kliknięcie pokazuje podgląd po prawej, dwuklik otwiera kartotekę. W zakładkach jest wszystko o firmie: dane, osoby kontaktowe, jej zapytania i przetargi, korespondencja, zadania, załączniki oraz pełna historia współpracy.' },
+  { route: '/korespondencja', target: '.dt-toolbar', title: 'Korespondencja', text: 'Każdy kontakt zapisujesz jako korespondencję: telefon, e-mail, spotkanie lub notatkę, i wiążesz go z kontrahentem oraz sprawą. Formularz sam mierzy czas rozmowy i nadaje numer. Wpis trafia do historii sprawy i kontrahenta.' },
+  { route: '/korespondencja-seryjna', target: '.main', title: 'Korespondencja seryjna', text: 'Jedna wiadomość do całej grupy kontrahentów albo do wyniku filtra z rejestru. W treści możesz użyć pól takich jak nazwa firmy czy imię osoby; przed wysyłką zobaczysz podgląd, a po niej status dla każdego odbiorcy.', module: 'mailing' },
   { route: '/kalendarz', target: '.main', title: 'Kalendarz zadań', text: 'Widok dnia lub tygodnia z wybraną gęstością siatki. Zadania przeciągasz między terminami. Przy zadaniu ustawisz przypomnienie: komunikat na ekranie, e-mail lub SMS, oraz stopień wykonania w procentach.' },
-  { route: '/zadania-cykliczne', target: '.main', title: 'Zadania cykliczne i automatyczne', text: 'Zadanie cykliczne powtarza się codziennie, w wybrane dni tygodnia, co miesiąc albo co kilka dni. Poza tym system sam tworzy zadania według reguł, np. „kontakt z nowym kontrahentem” kilka dni po jego dodaniu.' },
-  { route: '/wiadomosci', target: '.main', title: 'Korespondencja wewnętrzna', text: 'Wiadomości między operatorami. Przy wysyłaniu możesz podać termin doręczenia, wtedy adresat zobaczy wiadomość dopiero o tej porze. Nieprzeczytane wiadomości sygnalizuje dzwonek w górnym pasku.' },
-  { route: '/dokumenty', target: '.main', title: 'Rejestr dokumentów', text: 'Wirtualna szafa firmy: segregatory po lewej, dokumenty po prawej. Każdy dokument ma wersje, okres ważności i historię zmian, a dostęp nadaje się działom lub poszczególnym osobom. Oferty, zamówienia i pro formy powstają z szablonów jako gotowe pliki PDF.' },
-  { route: '/raporty', target: '.main', title: 'Raporty', text: 'Brak aktywności, skuteczność handlowców, statystyka zadań, aktywność operatora i czas pracy. Każdy raport można wydrukować, zapisać do PDF lub XLSX, a także ustawić automatyczną wysyłkę e-mailem, np. ostatniego dnia miesiąca.' },
-  { route: '/ustawienia', target: '.main', title: 'Ustawienia', text: 'Operatorzy i działy, słowniki, własne pola dodatkowe kontrahenta, reguły zadań automatycznych, konfiguracja poczty i SMS oraz dane firmy używane w szablonach dokumentów.', admin: true },
+  { route: '/zadania-cykliczne', target: '.main', title: 'Zadania cykliczne', text: 'Zadanie cykliczne powtarza się codziennie, w wybrane dni tygodnia, co miesiąc albo co kilka dni.', module: 'task_tools' },
+  { route: '/wiadomosci', target: '.main', title: 'Korespondencja wewnętrzna', text: 'Wiadomości między operatorami. Przy wysyłaniu możesz podać termin doręczenia, wtedy adresat zobaczy wiadomość dopiero o tej porze.', module: 'internal' },
+  { route: '/dokumenty', target: '.main', title: 'Rejestr dokumentów', text: 'Wirtualna szafa firmy: segregatory po lewej, dokumenty po prawej. Trafiają tu także dokumenty dodane w kartotekach spraw. Każdy dokument ma wersje, okres ważności i historię zmian, a dostęp nadaje się działom lub poszczególnym osobom.' },
+  { route: '/raporty', target: '.main', title: 'Raporty', text: 'Brak aktywności, statystyka zadań, aktywność operatora i czas pracy. Każdy raport można wydrukować, zapisać do PDF lub XLSX, a także ustawić automatyczną wysyłkę e-mailem, np. ostatniego dnia miesiąca.' },
+  { route: '/ustawienia', target: '.main', title: 'Ustawienia', text: 'Operatorzy i działy, słowniki, własne pola dodatkowe kontrahenta, reguły zadań automatycznych, konfiguracja poczty i SMS. W zakładce „Moduły” włącza się dodatkowe części systemu, np. sprzedaż i zamówienia.', admin: true },
   { route: '/', title: 'To wszystko', text: 'Znasz już najważniejsze miejsca w panelu. Samouczek możesz uruchomić ponownie w każdej chwili przyciskiem „Samouczek” w górnym pasku.' },
 ];
 
@@ -57,8 +62,8 @@ interface Rect {
   height: number;
 }
 
-export function Tour({ isAdmin, onClose }: { isAdmin: boolean; onClose: () => void }) {
-  const steps = STEPS.filter((s) => !s.admin || isAdmin);
+export function Tour({ isAdmin, modules, onClose }: { isAdmin: boolean; modules: Record<string, boolean>; onClose: () => void }) {
+  const steps = STEPS.filter((s) => (!s.admin || isAdmin) && (!s.module || modules[s.module]));
   const [i, setI] = useState(0);
   const [rect, setRect] = useState<Rect | null>(null);
   const nav = useNavigate();

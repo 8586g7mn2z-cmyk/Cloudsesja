@@ -34,6 +34,8 @@
   figure img { display: block; width: 100%; border: 1px solid var(--line); }
   figure.main { width: 142mm; }
   figure.crop img { aspect-ratio: 16 / 6.6; object-fit: cover; object-position: top; }
+  figure.crop.wide img { aspect-ratio: 16 / 5.4; }
+  figure.crop.tall img { aspect-ratio: 16 / 7.6; }
   .cover figure.main { width: 100%; }
   figcaption { font-size: 7.8pt; color: var(--text-2); margin-top: 1.4mm; }
   .split { display: grid; grid-template-columns: 98mm 1fr; gap: 6mm; margin-top: 4mm; align-items: start; }
@@ -65,19 +67,19 @@
 <section class="page cover">
   <div class="band">
     <div class="logo"><i></i>DIAGNOS</div>
-    <h1>Panel CRM</h1>
-    <div class="sub">Kontrahenci, korespondencja, zadania, dokumenty i raporty w jednym miejscu, w przeglądarce. Opis działania i wyglądu systemu.</div>
+    <h1>Zapytania, przetargi, dokumentacja</h1>
+    <div class="sub">Prosty panel w przeglądarce do przechowywania zapytań ofertowych, dokumentacji przetargowej i pełnej historii każdej sprawy. Opis działania i wyglądu.</div>
   </div>
   <div class="body">
-    <figure>
+    <figure class="main">
       <img src="zrzuty/01-moje-zadania-na-dzis.png" alt="">
-      <figcaption>Ekran startowy „Moje zadania na dziś”: plan dnia operatora, mini-kalendarz, szybkie notatki oraz zadania zaległe.</figcaption>
+      <figcaption>Ekran startowy: plan dnia, a po prawej najbliższe terminy składania ofert i zadania zaległe.</figcaption>
     </figure>
     <div class="facts">
-      <div><b>Pełna wiedza o kliencie</b><span>Dane, osoby, cała historia kontaktów, zadania, zamówienia, sprzedaż i dokumenty w jednej kartotece.</span></div>
-      <div><b>Praca zadaniowa</b><span>Kalendarz, zadania cykliczne i automatyczne, przypomnienia na ekranie, e‑mailem i SMS‑em.</span></div>
-      <div><b>Uporządkowane dokumenty</b><span>Segregatory, wersje, okres ważności, uprawnienia i historia zmian.</span></div>
-      <div><b>Raporty na żądanie</b><span>Aktywność, sprzedaż, zadania i czas pracy; wydruk, PDF, XLSX i wysyłka automatyczna.</span></div>
+      <div><b>Jeden rejestr spraw</b><span>Każde zapytanie i każdy przetarg z zamawiającym, znakiem sprawy, statusem i wynikiem.</span></div>
+      <div><b>Dokumentacja przy sprawie</b><span>Treść zapytania, specyfikacja, oferta i kolejne wersje w jednym miejscu.</span></div>
+      <div><b>Pełna historia</b><span>Kto, kiedy i co zrobił: korespondencja, dokumenty, zadania, zmiany statusu.</span></div>
+      <div><b>Terminy pod kontrolą</b><span>Termin składania ofert sam tworzy zadanie z przypomnieniem dzień wcześniej.</span></div>
     </div>
     <div class="foot"><span>Prospekt funkcjonalny</span><span>listopad 2026</span></div>
   </div>
@@ -85,189 +87,185 @@
 
 <!-- 2 -->
 <section class="page">
-  <div class="run"><div class="logo"><i></i>DIAGNOS</div><span>PANEL CRM · KONTRAHENCI</span></div>
-  <div class="kicker">Rejestr kontrahentów</div>
-  <h2>Każdy klient odnaleziony w kilka sekund</h2>
-  <p class="lead">Rejestr gromadzi wszystkie firmy, z którymi pracujecie. Szukanie działa po nazwie, NIP-ie, telefonie, adresie e-mail i nazwisku osoby kontaktowej, a listę można dowolnie filtrować i grupować.</p>
+  <div class="run"><div class="logo"><i></i>DIAGNOS</div><span>ZAPYTANIA I PRZETARGI</span></div>
+  <div class="kicker">Rejestr spraw</div>
+  <h2>Wszystkie zapytania i przetargi na jednej liście</h2>
+  <p class="lead">Rejestr odpowiada na trzy pytania: co wpłynęło, co jest w toku i co wymaga działania w najbliższych dniach. Sprawę zakłada się jednym formularzem.</p>
   <div class="cols">
     <ul>
-      <li>Dane teleadresowe i rejestracyjne: wiele adresów, NIP, REGON, KRS, urząd skarbowy, z kontrolą poprawności NIP i ostrzeżeniem o duplikacie.</li>
-      <li>Typ, status, grupa i podgrupa, grupa cenowa, źródło kontaktu, prowadzący, limit kredytu. Wszystkie słowniki edytuje administrator.</li>
-      <li>Własne pola dodatkowe (tekst, liczba, data, lista, tak/nie), widoczne w kartotece, w filtrach i jako kolumny.</li>
+      <li>Rodzaj (zapytanie ofertowe lub przetarg), przedmiot, kontrahent lub zamawiający, znak sprawy, źródło, data wpływu.</li>
+      <li>Termin składania ofert z kolumną „Do terminu”; sprawy po terminie są wyróżnione kolorem.</li>
+      <li>Status, opiekun, wartość szacunkowa, wynik (wygrane, przegrane, unieważnione, rezygnacja) i data rozstrzygnięcia.</li>
     </ul>
     <ul>
-      <li>Panel grupowania w każdym rejestrze: jedna lub kilka kolumn naraz, z licznikami grup, np. miasto, a w nim status.</li>
-      <li>Filtry gotowe do codziennej pracy: „tylko kluczowi” oraz „bez kontaktu od…”.</li>
-      <li>Eksport do XLSX i CSV oraz wydruk dokładnie tego, co widać na ekranie.</li>
+      <li>Filtr „Pokaż”: w toku, termin ofert w ciągu 14 dni, rozstrzygnięte, wszystkie.</li>
+      <li>Grupowanie po dowolnej kolumnie, np. według statusu, opiekuna lub zamawiającego, z licznikami grup.</li>
+      <li>Wyszukiwanie, filtry w kolumnach, eksport do XLSX i CSV, wydruk.</li>
     </ul>
   </div>
-  <figure class="main">
-    <img src="zrzuty/03-rejestr-grupowanie-miasto-status.png" alt="">
-    <figcaption>Rejestr pogrupowany według miasta i statusu. Po prawej podgląd zaznaczonego kontrahenta z osobami kontaktowymi.</figcaption>
+  <figure class="crop wide">
+    <img src="zrzuty/19b-zapytania-grupowanie-status.png" alt="">
+    <figcaption>Rejestr zapytań i przetargów pogrupowany według statusu.</figcaption>
   </figure>
   <div class="split">
     <figure>
-      <img src="zrzuty/04-kartoteka-szczegoly.png" alt="">
-      <figcaption>Kartoteka kontrahenta: dane podstawowe, pola dodatkowe i zadania w toku.</figcaption>
+      <img src="zrzuty/20-kartoteka-sprawy.png" alt="">
+      <figcaption>Kartoteka przetargu: najważniejsze dane, opis wymagań i etapy.</figcaption>
     </figure>
     <div class="side">
-      <h3>Kartoteka kontrahenta</h3>
-      <p>Jedno miejsce na wszystko, co dotyczy firmy. Zakładki: szczegóły, adresy, osoby, korespondencja, zadania, projekty, zamówienia, sprzedaż, załączniki, notatki, grupy, strona WWW i lokalizacja.</p>
-      <p>Liczniki przy zakładkach od razu pokazują, ile jest pozycji, a z nagłówka kartoteki jednym kliknięciem dodaje się korespondencję, zadanie lub dokument z szablonu.</p>
+      <h3>Kartoteka sprawy</h3>
+      <p>Po otwarciu sprawy widać od razu rodzaj, status, datę wpływu, termin składania ofert z liczbą dni do końca, źródło, wartość i wynik.</p>
+      <p>Zakładki prowadzą do dokumentacji, korespondencji, zadań i historii. Z nagłówka jednym kliknięciem dodaje się dokument, korespondencję lub zadanie.</p>
     </div>
   </div>
-  <div class="foot"><span>DIAGNOS · panel CRM</span><span>2</span></div>
+  <div class="foot"><span>DIAGNOS · panel zapytań i przetargów</span><span>2</span></div>
 </section>
 
 <!-- 3 -->
 <section class="page">
-  <div class="run"><div class="logo"><i></i>DIAGNOS</div><span>PANEL CRM · KORESPONDENCJA</span></div>
-  <div class="kicker">Korespondencja</div>
-  <h2>Co, kiedy i z kim zostało ustalone</h2>
-  <p class="lead">Każdy kontakt z klientem zostaje w systemie: rozmowa telefoniczna, e-mail, SMS, spotkanie, notatka. Po czasie łatwo sprawdzić, kto z firmy rozmawiał, z kim po stronie klienta i co ustalono.</p>
+  <div class="run"><div class="logo"><i></i>DIAGNOS</div><span>DOKUMENTACJA</span></div>
+  <div class="kicker">Dokumentacja</div>
+  <h2>Komplet dokumentów każdej sprawy</h2>
+  <p class="lead">Wszystko, co dotyczy zapytania lub przetargu, leży przy sprawie: treść zapytania, specyfikacja warunków zamówienia, wyjaśnienia zamawiającego, oferta i jej korekty.</p>
   <div class="cols">
     <ul>
-      <li>Rodzaj, kierunek, data i godzina, temat ze słownika lub własny, automatycznie nadawany numer.</li>
-      <li>Stoper mierzy faktyczny czas trwania rozmowy od otwarcia formularza; czas można poprawić ręcznie.</li>
-      <li>Powiązanie z kontrahentem, osobą kontaktową, projektem i jego etapem oraz z kontrahentem powiązanym.</li>
+      <li>Pliki w dowolnym formacie, z automatycznym numerem, typem dokumentu i autorem.</li>
+      <li>Wersje: nowa wersja nie kasuje poprzedniej; każdą można pobrać, każda ma autora, datę i komentarz.</li>
+      <li>Podgląd PDF i obrazów w przeglądarce.</li>
     </ul>
     <ul>
-      <li>Treść i załączniki; pliki można pobrać z rejestru dokumentów albo zapisać do niego prosto z wiadomości.</li>
-      <li>E-mail i SMS wysyłane z formularza przez firmową pocztę i bramkę SMS; status wysyłki widoczny przy wiadomości.</li>
-      <li>Rejestr całej korespondencji oraz ten sam widok w kartotece kontrahenta i projektu.</li>
+      <li>Te same dokumenty są widoczne w rejestrze dokumentów firmy, w segregatorach „Przetargi” i „Zapytania ofertowe”.</li>
+      <li>Uprawnienia do segregatora lub pojedynczego dokumentu dla działu albo osoby (wgląd lub edycja).</li>
+      <li>Rejestr zmian dokumentu: kto i kiedy dodał, zmienił, pobrał.</li>
     </ul>
   </div>
-  <figure class="crop">
-    <img src="zrzuty/11-formularz-korespondencji.png" alt="">
-    <figcaption>Nowa korespondencja otwarta z kartoteki kontrahenta. W nagłówku okna biegnie stoper czasu rozmowy.</figcaption>
+  <figure class="crop wide">
+    <img src="zrzuty/20b-sprawa-dokumentacja.png" alt="">
+    <figcaption>Zakładka „Dokumentacja” w kartotece przetargu.</figcaption>
   </figure>
   <div class="split">
     <figure>
-      <img src="zrzuty/06-kartoteka-korespondencja.png" alt="">
-      <figcaption>Historia korespondencji w kartotece kontrahenta, z treścią wybranej pozycji.</figcaption>
+      <img src="zrzuty/24-rejestr-dokumentow.png" alt="">
+      <figcaption>Rejestr dokumentów: segregatory, lista oraz dane, wersje i rejestr zmian wybranego dokumentu.</figcaption>
     </figure>
     <div class="side">
       <div class="box">
-        <h3>Korespondencja seryjna</h3>
-        <p>Jedna wiadomość do grupy kontrahentów albo do wyniku filtra. Pola takie jak nazwa firmy czy imię osoby podstawiają się same. Przed wysyłką jest podgląd, po niej status każdego odbiorcy, a u każdego kontrahenta powstaje wpis w historii.</p>
+        <h3>Wirtualna szafa firmy</h3>
+        <p>Poza dokumentami spraw rejestr przechowuje cenniki, instrukcje, umowy i procedury. Dokument może mieć okres ważności; po terminie sam przechodzi do archiwalnych.</p>
       </div>
       <div class="box">
-        <h3>Korespondencja wewnętrzna</h3>
-        <p>Wiadomości między operatorami z terminem doręczenia: adresat zobaczy je dopiero o wskazanej porze.</p>
+        <h3>Nic nie ginie</h3>
+        <p>Dokumenty archiwalne i wcześniejsze wersje pozostają dostępne dla uprawnionych osób.</p>
       </div>
     </div>
   </div>
-  <div class="foot"><span>DIAGNOS · panel CRM</span><span>3</span></div>
+  <div class="foot"><span>DIAGNOS · panel zapytań i przetargów</span><span>3</span></div>
 </section>
 
 <!-- 4 -->
 <section class="page">
-  <div class="run"><div class="logo"><i></i>DIAGNOS</div><span>PANEL CRM · ZADANIA I KALENDARZ</span></div>
-  <div class="kicker">Zadania i kalendarz</div>
-  <h2>Plan pracy, o którym system sam przypomina</h2>
-  <p class="lead">Zadania porządkują dzień każdego operatora i dają kierownikowi bieżący obraz pracy zespołu. Po zalogowaniu każdy widzi swój plan na dziś i zadania zaległe.</p>
+  <div class="run"><div class="logo"><i></i>DIAGNOS</div><span>HISTORIA</span></div>
+  <div class="kicker">Historia</div>
+  <h2>Co się wydarzyło, krok po kroku</h2>
+  <p class="lead">Historia sprawy to jedna lista w porządku czasowym. Bez szukania po skrzynkach i folderach widać cały przebieg: od wpływu zapytania po rozstrzygnięcie.</p>
   <div class="cols">
     <ul>
-      <li>Zadanie ma termin, wykonawcę lub kilku wykonawców, zlecającego, priorytet, status i stopień wykonania w procentach.</li>
-      <li>Powiązanie z kontrahentem, osobą, korespondencją lub projektem.</li>
-      <li>Kalendarz dzienny i tygodniowy z siatką 5–60 minut; zadanie przeciąga się myszą na nowy termin.</li>
-      <li>Przypomnienia z wybranym wyprzedzeniem: komunikat na ekranie wymagający potwierdzenia lub odłożenia, e‑mail, SMS.</li>
+      <li>Założenie sprawy oraz każda zmiana statusu, terminu składania ofert, opiekuna i wyniku.</li>
+      <li>Korespondencja: telefon, e-mail, spotkanie, notatka, z rozmówcą i treścią ustaleń.</li>
+      <li>Dodane dokumenty i ich kolejne wersje.</li>
     </ul>
     <ul>
-      <li>Zadania cykliczne: codziennie, w wybrane dni tygodnia, co miesiąc lub co kilka dni, z datą końca.</li>
-      <li>Zadania automatyczne według reguł ustawianych przez administratora, np. kontakt z nowym kontrahentem po trzech dniach.</li>
-      <li>Ewidencja czasu: godziny z zadań i rozmów sumują się dla operatora, kontrahenta i projektu.</li>
-      <li>Kierownik widzi zadania swoich pracowników i stan ich wykonania.</li>
+      <li>Zaplanowane i wykonane zadania.</li>
+      <li>Przy każdym zdarzeniu data, godzina i osoba. Kliknięcie otwiera wpis, którego dotyczy.</li>
+      <li>Taka sama historia w kartotece kontrahenta: wszystkie jego sprawy i kontakty.</li>
     </ul>
   </div>
-  <figure class="main">
-    <img src="zrzuty/16-kalendarz-tydzien.png" alt="">
-    <figcaption>Kalendarz tygodniowy. Kolor oznacza stan zadania, pasek u dołu pozycji stopień wykonania, czerwona linia bieżącą godzinę.</figcaption>
+  <figure class="crop tall">
+    <img src="zrzuty/20c-sprawa-historia.png" alt="">
+    <figcaption>Historia przetargu: dokumentacja, pytania do zamawiającego, odpowiedzi, zmiana statusu.</figcaption>
   </figure>
   <div class="split">
-    <figure>
-      <img src="zrzuty/12-formularz-zadania.png" alt="">
-      <figcaption>Formularz zadania: termin, wykonawcy, powiązania, postęp i przypomnienie.</figcaption>
+    <figure class="crop">
+      <img src="zrzuty/11-formularz-korespondencji.png" alt="">
+      <figcaption>Zapis kontaktu: rodzaj, kierunek, temat, rozmówca i sprawa. Stoper mierzy czas rozmowy.</figcaption>
     </figure>
     <div class="side">
-      <h3>Projekty, zamówienia, sprzedaż</h3>
-      <p>Projekty z etapami i opiekunem mają własną kartotekę z korespondencją, zadaniami i załącznikami.</p>
-      <p>Zamówienia i dokumenty sprzedaży powstają z pozycji kartoteki towarowej; wartości netto i brutto liczą się same. Historia zamówień i sprzedaży jest widoczna w kartotece kontrahenta.</p>
+      <h3>Korespondencja</h3>
+      <p>Każdą rozmowę, wiadomość i spotkanie zapisuje się jednym formularzem i wiąże ze sprawą oraz kontrahentem. Wpis dostaje numer i trafia do historii.</p>
+      <p>Do korespondencji można dołączyć pliki, a załącznik z wiadomości zapisać w dokumentacji sprawy.</p>
     </div>
   </div>
-  <div class="foot"><span>DIAGNOS · panel CRM</span><span>4</span></div>
+  <div class="foot"><span>DIAGNOS · panel zapytań i przetargów</span><span>4</span></div>
 </section>
 
 <!-- 5 -->
 <section class="page">
-  <div class="run"><div class="logo"><i></i>DIAGNOS</div><span>PANEL CRM · DOKUMENTY I RAPORTY</span></div>
-  <div class="kicker">Dokumenty</div>
-  <h2>Wirtualna szafa z kontrolą dostępu</h2>
+  <div class="run"><div class="logo"><i></i>DIAGNOS</div><span>KONTRAHENCI I TERMINY</span></div>
+  <div class="kicker">Kontrahenci i terminy</div>
+  <h2>Baza firm i pilnowanie terminów</h2>
+  <p class="lead">Kontrahenci i zamawiający mają własne kartoteki, a kalendarz z przypomnieniami pilnuje, żeby żadna oferta nie została złożona po czasie.</p>
   <div class="cols">
     <ul>
-      <li>Segregatory i typy dokumentów, pliki w dowolnym formacie, automatyczny numer, podgląd PDF i obrazów w przeglądarce.</li>
-      <li>Wersje: nowa edycja nie kasuje poprzedniej, każda ma autora i datę.</li>
-      <li>Okres ważności: po terminie dokument sam przechodzi do archiwalnych.</li>
+      <li>Kartoteka kontrahenta: dane teleadresowe i rejestracyjne, osoby kontaktowe, jego zapytania i przetargi, korespondencja, załączniki, historia.</li>
+      <li>Szukanie po nazwie, NIP-ie, telefonie, adresie e-mail i nazwisku; filtry i grupowanie jak w każdym rejestrze.</li>
+      <li>Własne pola dodatkowe i słowniki ustawiane przez administratora.</li>
     </ul>
     <ul>
-      <li>Uprawnienia do segregatora lub pojedynczego dokumentu dla działu albo osoby (wgląd lub edycja), sprawdzane także przy pobieraniu pliku.</li>
-      <li>Rejestr zmian: kto i kiedy dodał, zmienił, pobrał.</li>
-      <li>Szablony oferty, zamówienia i faktury pro forma: gotowy PDF w jednolitej szacie firmy, zapisany przy kontrahencie.</li>
+      <li>Termin składania ofert tworzy zadanie dla opiekuna; zmiana terminu przesuwa zadanie.</li>
+      <li>Przypomnienie dzień wcześniej: komunikat na ekranie wymagający potwierdzenia oraz e-mail.</li>
+      <li>Kalendarz dzienny i tygodniowy; własne zadania z postępem w procentach, powiązane ze sprawą lub kontrahentem.</li>
     </ul>
   </div>
   <figure class="main">
-    <img src="zrzuty/24-rejestr-dokumentow.png" alt="">
-    <figcaption>Rejestr dokumentów: segregatory po lewej, lista w środku, dane, wersje i rejestr zmian wybranego dokumentu po prawej.</figcaption>
+    <img src="zrzuty/16-kalendarz-tydzien.png" alt="">
+    <figcaption>Kalendarz tygodniowy. Zadania można przeciągać na inny termin.</figcaption>
   </figure>
-  <div class="kicker" style="margin-top:4mm">Raporty</div>
-  <div class="split" style="margin-top:1mm">
+  <div class="split">
     <figure>
-      <img src="zrzuty/30-raport-aktywnosc-operatora.png" alt="">
-      <figcaption>Raport aktywności operatora: korespondencja według rodzaju i kierunku, z czasem i wykresem.</figcaption>
+      <img src="zrzuty/03-rejestr-grupowanie-miasto-status.png" alt="">
+      <figcaption>Rejestr kontrahentów pogrupowany według miasta i statusu, z podglądem po prawej.</figcaption>
     </figure>
     <div class="side">
+      <h3>Raporty</h3>
       <ul>
-        <li><b>Brak aktywności:</b> klienci bez kontaktu od wskazanej liczby dni.</li>
-        <li><b>Skuteczność handlowców:</b> sprzedaż, liczba transakcji i klientów.</li>
-        <li><b>Statystyka zadań:</b> wykonane, w toku, przeterminowane.</li>
-        <li><b>Aktywność operatora</b> i <b>czas pracy</b> według osoby, kontrahenta i projektu.</li>
+        <li>Brak aktywności: firmy bez kontaktu od wskazanej liczby dni.</li>
+        <li>Statystyka zadań i aktywność operatora.</li>
+        <li>Czas pracy według osoby, kontrahenta i sprawy.</li>
       </ul>
-      <p style="margin-top:2mm">Każdy raport można wydrukować, zapisać do PDF lub XLSX, a także zlecić automatyczną wysyłkę e‑mailem, np. ostatniego dnia miesiąca.</p>
+      <p style="margin-top:2mm">Wydruk, PDF, XLSX oraz automatyczna wysyłka e‑mailem.</p>
     </div>
   </div>
-  <div class="foot"><span>DIAGNOS · panel CRM</span><span>5</span></div>
+  <div class="foot"><span>DIAGNOS · panel zapytań i przetargów</span><span>5</span></div>
 </section>
 
 <!-- 6 -->
 <section class="page">
-  <div class="run"><div class="logo"><i></i>DIAGNOS</div><span>PANEL CRM · WDROŻENIE</span></div>
-  <div class="kicker">Samouczek</div>
-  <h2>Nowy pracownik zaczyna pracę bez szkolenia</h2>
-  <p class="lead">Wbudowany samouczek prowadzi krok po kroku po najważniejszych ekranach, podświetlając omawiany element i wyjaśniając, do czego służy. Przy pierwszym logowaniu panel sam go proponuje, a później jest dostępny pod przyciskiem w górnym pasku.</p>
+  <div class="run"><div class="logo"><i></i>DIAGNOS</div><span>PROSTOTA I WDROŻENIE</span></div>
+  <div class="kicker">Prostota</div>
+  <h2>Tylko to, co potrzebne. Z samouczkiem na start</h2>
+  <p class="lead">Menu ma siedem pozycji roboczych: plan dnia, kalendarz, zapytania i przetargi, kontrahentów, korespondencję, dokumenty i raporty. Wbudowany samouczek prowadzi nową osobę krok po kroku po ekranach, podświetlając omawiany element.</p>
   <figure style="margin-top:2mm; width:150mm">
-    <img src="zrzuty/44-samouczek-grupowanie.png" alt="">
-    <figcaption>Samouczek, krok 6 z 17: podświetlony panel grupowania w rejestrze kontrahentów.</figcaption>
+    <img src="zrzuty/44-samouczek-zapytania.png" alt="">
+    <figcaption>Samouczek: krok omawiający rejestr zapytań i przetargów.</figcaption>
   </figure>
   <div class="cols" style="margin-top:4mm">
     <div>
-      <h3>Przeniesienie danych</h3>
-      <p>Kontrahentów, osoby kontaktowe, kartotekę towarową i historię sprzedaży wczytuje się z plików Excel lub CSV: wskazanie kolumn, podgląd, raport z importu z przyczyną każdego odrzuconego wiersza. Ponowny import aktualizuje istniejące rekordy zamiast je dublować.</p>
-      <p>Bezpośrednie połączenie z programem enova365 jest przewidziane jako kolejny etap; import jest już na nie przygotowany.</p>
+      <h3>Moduły dodatkowe</h3>
+      <p>Sprzedaż, zamówienia i kartoteka towarowa, korespondencja seryjna, szablony dokumentów, zadania cykliczne i wiadomości wewnętrzne są gotowe, ale wyłączone. Administrator włącza je jednym przełącznikiem, gdy okażą się potrzebne; do tego czasu nie zajmują miejsca na ekranie.</p>
     </div>
     <div>
       <h3>Role i bezpieczeństwo</h3>
-      <p>Trzy role: administrator, kierownik i handlowiec, oraz działy używane w uprawnieniach do dokumentów. Hasła nie są przechowywane jawnym tekstem, pierwsze logowanie wymusza zmianę hasła, a sesja wygasa po okresie bezczynności.</p>
-      <p>Dane i pliki pozostają na serwerze firmy; do pakietu należy skrypt kopii zapasowej.</p>
+      <p>Trzy role: administrator, kierownik i pracownik, oraz działy używane w uprawnieniach do dokumentów. Hasła nie są przechowywane jawnym tekstem, pierwsze logowanie wymusza zmianę hasła. Dane i pliki pozostają na serwerze firmy.</p>
     </div>
   </div>
   <table>
     <tr><th colspan="2">Uruchomienie u klienta</th></tr>
-    <tr><td>Środowisko</td><td>Jeden serwer lub komputer w sieci firmy (Docker albo Node.js 22). Operatorzy pracują w przeglądarce, na monitorze od 1366 px szerokości; nic nie instaluje się na stanowiskach.</td></tr>
-    <tr><td>Poczta e-mail</td><td>Dane firmowego serwera pocztowego (SMTP) wpisuje administrator w ustawieniach. Od tej chwili działają wysyłka z korespondencji, korespondencja seryjna, przypomnienia e-mail i raporty automatyczne.</td></tr>
-    <tr><td>SMS</td><td>Wymaga konta u operatora bramki SMS; dane dostępowe wpisuje się w ustawieniach.</td></tr>
-    <tr><td>Dane firmy</td><td>Logo, adres i numer rachunku do szablonów oferty, zamówienia i faktury pro forma.</td></tr>
+    <tr><td>Środowisko</td><td>Jeden serwer lub komputer w sieci firmy (Docker albo Node.js 22). Praca w przeglądarce, na monitorze od 1366 px szerokości; nic nie instaluje się na stanowiskach.</td></tr>
+    <tr><td>Dane początkowe</td><td>Bazę kontrahentów i osób kontaktowych wczytuje się z pliku Excel lub CSV, z podglądem i raportem z importu.</td></tr>
+    <tr><td>Poczta e-mail</td><td>Dane firmowego serwera pocztowego (SMTP) wpisuje administrator. Od tej chwili działają przypomnienia e-mail, wysyłka z korespondencji i raporty automatyczne.</td></tr>
+    <tr><td>Kopie zapasowe</td><td>Do pakietu należy skrypt kopii bazy i plików.</td></tr>
   </table>
-  <div class="foot"><span>DIAGNOS · panel CRM</span><span>6</span></div>
+  <div class="foot"><span>DIAGNOS · panel zapytań i przetargów</span><span>6</span></div>
 </section>
 </body>
 </html>

@@ -7,9 +7,18 @@ import { useApp } from '../lib/store';
 import { CalendarGrid, MiniCalendar } from '../components/CalendarGrid';
 import { Input, Select } from '../components/ui';
 import { TaskForm } from './TaskForm';
+import { useNavigate } from 'react-router-dom';
+import { CASE_KINDS, daysToDeadline } from './columns';
 
 export function TodayPage() {
   const { user, toast } = useApp();
+  const nav = useNavigate();
+  const cases = useApi<any[]>('/api/projects');
+  const deadlines = (cases.data ?? [])
+    .map((c) => ({ c, d: daysToDeadline(c) }))
+    .filter((x) => x.d != null && x.d <= 14)
+    .sort((a, b) => a.c.submit_deadline.localeCompare(b.c.submit_deadline))
+    .slice(0, 8);
   const [day, setDay] = useState(today());
   const [step, setStep] = useState(15);
   const [form, setForm] = useState<{ id?: number; start?: string } | null>(null);
@@ -72,6 +81,17 @@ export function TodayPage() {
           <div className="sp-body">
             <h2 style={{ color: 'var(--navy)', marginBottom: 8 }}>{longDate(day)}</h2>
             <MiniCalendar value={day} onChange={setDay} marked={marked} />
+            <div className="section-title">Terminy składania ofert ({deadlines.length})</div>
+            {!deadlines.length && <div className="small muted">Brak terminów w najbliższych 14 dniach.</div>}
+            <ul className="list-plain">
+              {deadlines.map(({ c, d }) => (
+                <li key={c.id} className="small" style={{ cursor: 'pointer' }} onClick={() => nav(`/projekty/${c.id}`)} title="Otwórz kartotekę sprawy">
+                  <b className={d! <= 3 ? 'deadline-soon' : ''}>{fmtDateTime(c.submit_deadline)}</b> · {d! < 0 ? `${-d!} dni po terminie` : d === 0 ? 'dziś' : `za ${d} dni`}
+                  <div>{CASE_KINDS[c.kind] ?? ''}: {c.name}</div>
+                  <div className="muted">{c.contractor_short || c.contractor_name || ''}</div>
+                </li>
+              ))}
+            </ul>
             <div className="section-title">Szybka notatka</div>
             <div className="row">
               <Input placeholder="Wpisz treść notatki…" value={note} onChange={(e) => setNote(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && addNote()} />

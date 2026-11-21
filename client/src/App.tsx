@@ -198,33 +198,34 @@ function Notifications({ onCount }: { onCount: (n: { messages: number; outbox: n
   );
 }
 
-const NAV: { sec: string; items: { to: string; label: string; icon: any; manager?: boolean; admin?: boolean }[] }[] = [
+// `module` = pozycja widoczna tylko przy włączonym module (Ustawienia → Moduły); dane wyłączonych modułów zostają w bazie.
+const NAV: { sec: string; items: { to: string; label: string; icon: any; manager?: boolean; admin?: boolean; module?: string }[] }[] = [
   { sec: 'Praca', items: [
     { to: '/', label: 'Moje zadania na dziś', icon: CalendarDays },
     { to: '/kalendarz', label: 'Kalendarz zadań', icon: CalendarClock },
-    { to: '/zadania', label: 'Rejestr zadań', icon: ListChecks },
-    { to: '/zadania-cykliczne', label: 'Zadania cykliczne', icon: Repeat },
+    { to: '/zadania', label: 'Rejestr zadań', icon: ListChecks, module: 'task_tools' },
+    { to: '/zadania-cykliczne', label: 'Zadania cykliczne', icon: Repeat, module: 'task_tools' },
   ] },
-  { sec: 'Kontrahenci', items: [
+  { sec: 'Sprawy', items: [
+    { to: '/projekty', label: 'Zapytania i przetargi', icon: FolderKanban },
     { to: '/kontrahenci', label: 'Kontrahenci', icon: Building2 },
     { to: '/korespondencja', label: 'Korespondencja', icon: MessagesSquare },
-    { to: '/korespondencja-seryjna', label: 'Korespondencja seryjna', icon: Mails },
-    { to: '/wiadomosci', label: 'Korespondencja wewnętrzna', icon: Inbox },
+    { to: '/korespondencja-seryjna', label: 'Korespondencja seryjna', icon: Mails, module: 'mailing' },
+    { to: '/wiadomosci', label: 'Korespondencja wewnętrzna', icon: Inbox, module: 'internal' },
   ] },
   { sec: 'Handel', items: [
-    { to: '/projekty', label: 'Projekty', icon: FolderKanban },
-    { to: '/zamowienia', label: 'Zamówienia', icon: ShoppingCart },
-    { to: '/sprzedaz', label: 'Sprzedaż', icon: Receipt },
-    { to: '/towary', label: 'Kartoteka towarowa', icon: Package },
+    { to: '/zamowienia', label: 'Zamówienia', icon: ShoppingCart, module: 'sales' },
+    { to: '/sprzedaz', label: 'Sprzedaż', icon: Receipt, module: 'sales' },
+    { to: '/towary', label: 'Kartoteka towarowa', icon: Package, module: 'sales' },
   ] },
   { sec: 'Dokumenty', items: [
     { to: '/dokumenty', label: 'Rejestr dokumentów', icon: FileText },
-    { to: '/szablony', label: 'Szablony dokumentów', icon: FileStack },
+    { to: '/szablony', label: 'Szablony dokumentów', icon: FileStack, module: 'templates' },
   ] },
   { sec: 'Analizy', items: [{ to: '/raporty', label: 'Raporty', icon: BarChart3 }] },
   { sec: 'Narzędzia', items: [
     { to: '/import', label: 'Import danych', icon: Upload, manager: true },
-    { to: '/kolejka', label: 'Kolejka wysyłki', icon: Send },
+    { to: '/kolejka', label: 'Kolejka wysyłki', icon: Send, module: 'mailing' },
     { to: '/ustawienia', label: 'Ustawienia', icon: Settings, admin: true },
   ] },
 ];
@@ -234,7 +235,7 @@ function Layout() {
   const nav = useNavigate();
   const [counts, setCounts] = useState({ messages: 0, outbox: 0 });
   const [pw, setPw] = useState(false);
-  const { isManager, isAdmin } = useApp();
+  const { isManager, isAdmin, status } = useApp();
   const [tour, setTour] = useState(false);
   const [invite, setInvite] = useState(() => !!user && !tourSeen(user.id));
   const closeInvite = () => {
@@ -255,10 +256,12 @@ function Layout() {
         <GlobalSearch />
         <div className="spacer" />
         <Clock />
-        <button className="tb-btn" title="Korespondencja wewnętrzna" onClick={() => nav('/wiadomosci')}>
-          <Bell size={15} />
-          {counts.messages > 0 && <span className="badge-count">{counts.messages}</span>}
-        </button>
+        {(status.modules?.internal || counts.messages > 0) && (
+          <button className="tb-btn" title="Korespondencja wewnętrzna" onClick={() => nav('/wiadomosci')}>
+            <Bell size={15} />
+            {counts.messages > 0 && <span className="badge-count">{counts.messages}</span>}
+          </button>
+        )}
         {counts.outbox > 0 && (
           <button className="tb-btn" title="Wiadomości oczekujące na konfigurację lub z błędem wysyłki" onClick={() => nav('/kolejka')}>
             <Send size={15} /> <span className="badge-count">{counts.outbox}</span>
@@ -275,10 +278,10 @@ function Layout() {
         </button>
       </header>
       <nav className="sidebar" aria-label="Nawigacja">
-        {NAV.map((s) => (
+        {NAV.map((s) => ({ ...s, items: s.items.filter((i) => (!i.manager || isManager) && (!i.admin || isAdmin) && (!i.module || status.modules?.[i.module])) })).filter((s) => s.items.length).map((s) => (
           <div key={s.sec}>
             <div className="nav-sec">{s.sec}</div>
-            {s.items.filter((i) => (!i.manager || isManager) && (!i.admin || isAdmin)).map((i) => (
+            {s.items.map((i) => (
               <NavLink key={i.to} to={i.to} end={i.to === '/'} className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
                 <i.icon size={15} /> {i.label}
               </NavLink>
@@ -313,7 +316,7 @@ function Layout() {
       </main>
       <Notifications onCount={setCounts} />
       {pw && <ChangePasswordDialog onClose={() => setPw(false)} />}
-      {tour && <Tour isAdmin={isAdmin} onClose={() => setTour(false)} />}
+      {tour && <Tour isAdmin={isAdmin} modules={status.modules ?? {}} onClose={() => setTour(false)} />}
       {invite && !tour && <TourInvite onStart={() => (closeInvite(), setTour(true))} onDismiss={closeInvite} />}
     </div>
   );

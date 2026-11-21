@@ -29,7 +29,7 @@ function ReportParams({ type, p, set }: { type: string; p: any; set: (k: string,
       {(isManager || type === 'activity') && (
         <span className="fl" style={{ width: 230 }}>Operator <OperatorSelect value={p.operator_id} onChange={(v) => set('operator_id', v)} empty={type === 'activity' ? '(ja)' : '(wszyscy widoczni)'} /></span>
       )}
-      {type === 'time' && <span className="fl">Wg <Select value={p.group_by} onChange={(v) => set('group_by', v)} empty={null} options={[{ value: 'operator', label: 'operatora' }, { value: 'contractor', label: 'kontrahenta' }, { value: 'project', label: 'projektu' }]} /></span>}
+      {type === 'time' && <span className="fl">Wg <Select value={p.group_by} onChange={(v) => set('group_by', v)} empty={null} options={[{ value: 'operator', label: 'operatora' }, { value: 'contractor', label: 'kontrahenta' }, { value: 'project', label: 'sprawy' }]} /></span>}
     </>
   );
 }
@@ -110,8 +110,8 @@ function Schedules() {
 }
 
 export function ReportsPage() {
-  const { toast } = useApp();
-  const [tab, setTab] = useState('sales');
+  const { toast, status } = useApp();
+  const [tab, setTab] = useState('inactivity');
   const [params, setParams] = useState<Record<string, any>>({
     inactivity: { days: 30, only_key: false },
     sales: { from: `${today().slice(0, 8)}01`, to: today() },
@@ -138,7 +138,7 @@ export function ReportsPage() {
   };
   const tabs = [
     { key: 'inactivity', label: 'Brak aktywności' },
-    { key: 'sales', label: 'Skuteczność handlowców' },
+    ...(status.modules?.sales ? [{ key: 'sales', label: 'Skuteczność handlowców' }] : []),
     { key: 'tasks', label: 'Statystyka zadań' },
     { key: 'activity', label: 'Aktywność operatora' },
     { key: 'time', label: 'Czas pracy' },

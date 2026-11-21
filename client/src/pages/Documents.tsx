@@ -24,7 +24,7 @@ function MetaFields({ v, set, folders }: { v: any; set: (k: string) => (x: any) 
       <DictSelect dict="doc_type" value={v.type_id} onChange={set('type_id')} />
       <label className="lbl">Kontrahent</label>
       <ContractorPicker value={v.contractor_id} onChange={set('contractor_id')} />
-      <label className="lbl">Projekt</label>
+      <label className="lbl">Sprawa</label>
       <Combo items={(projects.data ?? []).map((p) => ({ id: p.id, label: p.name, sub: p.number }))} value={v.project_id} onChange={set('project_id')} />
       <label className="lbl">Ważny od</label>
       <Input type="date" value={v.valid_from ?? ''} onChange={(e) => set('valid_from')(e.target.value)} />
@@ -34,9 +34,9 @@ function MetaFields({ v, set, folders }: { v: any; set: (k: string) => (x: any) 
   );
 }
 
-function AddDocument({ folders, folderId, onClose, onSaved }: { folders: any[]; folderId: number | null; onClose: () => void; onSaved: () => void }) {
+export function AddDocument({ folders, folderId, defaults, onClose, onSaved }: { folders: any[]; folderId: number | null; defaults?: { contractor_id?: number | null; project_id?: number | null }; onClose: () => void; onSaved: () => void }) {
   const { toast } = useApp();
-  const [v, setV] = useState<any>({ name: '', description: '', folder_id: folderId, type_id: null, contractor_id: null, project_id: null, valid_from: '', valid_to: '', comment: '' });
+  const [v, setV] = useState<any>({ name: '', description: '', folder_id: folderId, type_id: null, contractor_id: defaults?.contractor_id ?? null, project_id: defaults?.project_id ?? null, valid_from: '', valid_to: '', comment: '' });
   const [file, setFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -165,7 +165,7 @@ function DocPanel({ id, folders, onChanged }: { id: number; folders: any[]; onCh
               <dt>Autor</dt><dd>{x.author_name}</dd>
               <dt>Ważność</dt><dd>{x.valid_from || x.valid_to ? `${fmtDate(x.valid_from) || '…'} – ${fmtDate(x.valid_to) || '…'}` : 'bezterminowo'} <span className={`pill ${x.validity === 'aktualny' ? 'ok' : 'warn'}`}>{x.validity}</span></dd>
               <dt>Kontrahent</dt><dd>{x.contractor_name}</dd>
-              <dt>Projekt</dt><dd>{x.project_name}</dd>
+              <dt>Sprawa</dt><dd>{x.project_name}</dd>
               <dt>Twoje prawo</dt><dd>{canEdit ? 'edycja' : 'podgląd'}</dd>
             </dl>
             {x.mime?.startsWith('image/') && <img src={`/api/documents/${id}/file?inline=1`} alt={x.name} style={{ maxWidth: '100%', marginTop: 8, border: '1px solid var(--line)' }} />}

@@ -128,11 +128,21 @@ npm run build && npm run symulacja
 
 Symulacja uruchamia prawdziwy serwer na pustej bazie i przez miesiąc „czasu firmy" wykonuje pracę siedmiu operatorów, porównując każdy wynik z niezależną księgą kontrolną (rejestry, przypomnienia, wiadomości, e-maile, SMS-y, raporty, uprawnienia, spójność bazy), a na koniec przegląda każdy ekran w przeglądarce. Raport trafia do `symulacja/wyniki/<data>/raport.md`. Opis i parametry: [docs/SYMULACJA.md](docs/SYMULACJA.md).
 
+## Zakres panelu i moduły
+
+Panel jest ustawiony na pracę z **zapytaniami ofertowymi i przetargami, ich dokumentacją oraz historią** (menu: plan dnia, kalendarz, zapytania i przetargi, kontrahenci, korespondencja, dokumenty, raporty).
+
+- **Zapytania i przetargi:** rejestr spraw z rodzajem, zamawiającym, znakiem sprawy, datą wpływu, terminem składania ofert, statusem i wynikiem. Podanie terminu ofert tworzy opiekunowi zadanie z przypomnieniem dobę wcześniej; zmiana terminu przesuwa zadanie.
+- **Dokumentacja:** dokumenty dodane w kartotece sprawy trafiają do rejestru dokumentów (wersje, ważność, uprawnienia), domyślnie do segregatorów „Przetargi” i „Zapytania ofertowe”.
+- **Historia:** zakładka w kartotece sprawy i kontrahenta z chronologiczną listą korespondencji, dokumentów, zadań i zmian statusu.
+
+Pozostałe części systemu są gotowe, ale domyślnie wyłączone. Administrator włącza je w **Ustawienia → Moduły**: sprzedaż, zamówienia i kartoteka towarowa; korespondencja seryjna i kolejka wysyłki; szablony dokumentów; rejestr zadań i zadania cykliczne; korespondencja wewnętrzna. Wyłączenie modułu chowa go w menu, kartotekach i samouczku, ale nie kasuje danych.
+
 ## Role i uprawnienia
 
 - **Administrator:** wszystko, w tym operatorzy, słowniki, pola dodatkowe, reguły, konfiguracja poczty i SMS, usuwanie dokumentów.
 - **Kierownik:** widzi zadania i raporty swojego zespołu; usuwa kontrahentów, projekty, zamówienia i sprzedaż; zmienia kartotekę towarową, szablony i segregatory; importuje dane; zarządza kolejką wysyłki.
-- **Handlowiec:** pracuje na wspólnej bazie kontrahentów; edytuje i wysyła własną korespondencję, własne zamówienia i ręcznie wprowadzoną własną sprzedaż; widzi własne zadania oraz zadania przypisane do kontrahentów i projektów.
+- **Pracownik** (w bazie rola `handlowiec`): pracuje na wspólnej bazie kontrahentów; edytuje i wysyła własną korespondencję, własne zamówienia i ręcznie wprowadzoną własną sprzedaż; widzi własne zadania oraz zadania przypisane do kontrahentów i projektów.
 
 Zadanie bez kontrahenta i projektu jest prywatne: widzą je zlecający, wykonawcy i ich przełożeni.
 

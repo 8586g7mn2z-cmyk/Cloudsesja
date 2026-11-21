@@ -1,27 +1,27 @@
 # Symulacja pracy firmy w DIAGNOS CRM
 
-**Wynik: bez zastrzeżeń.** Wszystkie 26211 sprawdzeń zgodne z niezależną księgą symulacji.
+**Wynik: bez zastrzeżeń.** Wszystkie 25977 sprawdzeń zgodne z niezależną księgą symulacji.
 
-Okres: 33 dni od 2026-03-02 do 2026-04-03 (czas firmy), ziarno losowości 7, czas wykonania 84 s, żądań do API: 10273.
+Okres: 33 dni od 2026-03-02 do 2026-04-03 (czas firmy), ziarno losowości 7, czas wykonania 87 s, żądań do API: 10157.
 
 ## Co się wydarzyło w symulowanej firmie
 
 | Wielkość | Liczba |
 |---|---:|
 | Operatorzy | 7 |
-| Kontrahenci | 141 |
-| Osoby kontaktowe | 205 |
-| Pozycje korespondencji | 501 |
-| Zadania (w tym cykliczne i automatyczne) | 385 |
-| Przypomnienia, które zadziałały | 224 |
-| Zamówienia | 42 |
-| Dokumenty sprzedaży | 109 |
-| Sprzedaż netto [zł] | 3050881.84 |
-| Projekty | 19 |
-| Dokumenty w rejestrze | 69 |
-| Wiadomości wewnętrzne | 42 |
-| E-maile odebrane przez testowy serwer poczty | 207 |
-| SMS-y odebrane przez testową bramkę | 28 |
+| Kontrahenci | 134 |
+| Osoby kontaktowe | 186 |
+| Pozycje korespondencji | 477 |
+| Zadania (w tym cykliczne i automatyczne) | 396 |
+| Przypomnienia, które zadziałały | 226 |
+| Zamówienia | 55 |
+| Dokumenty sprzedaży | 100 |
+| Sprzedaż netto [zł] | 3107300.82 |
+| Projekty | 23 |
+| Dokumenty w rejestrze | 64 |
+| Wiadomości wewnętrzne | 39 |
+| E-maile odebrane przez testowy serwer poczty | 194 |
+| SMS-y odebrane przez testową bramkę | 33 |
 
 Najważniejsze zdarzenia:
 
@@ -29,6 +29,7 @@ Najważniejsze zdarzenia:
 - 2026-03-03 10:00  Import: 30 kontrahentów, 20 osób, 3 towary, 12 dokumentów sprzedaży; ponowny import bez duplikatów.
 - 2026-03-04 11:00  Dokumenty: sprawdzono uprawnienia segregatora i dokumentu, wersje, rejestr zmian, pliki z aktywną treścią.
 - 2026-03-05 10:30  Korespondencja seryjna do grupy Handel: 35 wiadomości.
+- 2026-03-09 09:45  Przetarg przeprowadzony od wpływu do rozstrzygnięcia: termin ofert, dokumentacja z wersjami, historia.
 - 2026-03-10 10:00  Awaria serwera poczty i bramki SMS (10:00–13:00).
 - 2026-03-10 13:00  Po awarii ponowiono 2 wysyłek.
 
@@ -37,30 +38,31 @@ Najważniejsze zdarzenia:
 | Obszar | Sprawdzeń | Niezgodności |
 |---|---:|---:|
 | Bezpieczeństwo plików | 3 | 0 |
-| Dokumenty | 1055 | 0 |
-| E-mail | 614 | 0 |
+| Dokumenty | 1027 | 0 |
+| E-mail | 562 | 0 |
 | Import | 75 | 0 |
-| Interfejs | 171 | 0 |
-| Kontrahenci | 367 | 0 |
+| Interfejs | 168 | 0 |
+| Kontrahenci | 366 | 0 |
 | Korespondencja seryjna | 44 | 0 |
-| Korespondencja wewnętrzna | 5817 | 0 |
-| Korespondencja | 349 | 0 |
+| Korespondencja wewnętrzna | 5814 | 0 |
+| Korespondencja | 328 | 0 |
 | Logowanie i sesje | 28 | 0 |
-| Projekty | 19 | 0 |
-| Przypomnienia | 815 | 0 |
+| Projekty | 22 | 0 |
+| Przypomnienia | 831 | 0 |
 | Raporty automatyczne | 11 | 0 |
 | Raporty | 224 | 0 |
 | Rejestry | 152 | 0 |
-| SMS | 79 | 0 |
+| SMS | 95 | 0 |
 | Spójność danych | 10 | 0 |
-| Stabilność | 9288 | 0 |
+| Stabilność | 9188 | 0 |
 | Uprawnienia do dokumentów | 15 | 0 |
 | Uprawnienia | 846 | 0 |
-| Zadania automatyczne | 183 | 0 |
+| Zadania automatyczne | 189 | 0 |
 | Zadania cykliczne | 116 | 0 |
-| Zadania | 5571 | 0 |
-| Zamówienia i sprzedaż | 320 | 0 |
-| Załączniki | 39 | 0 |
+| Zadania | 5482 | 0 |
+| Zamówienia i sprzedaż | 341 | 0 |
+| Zapytania i przetargi | 10 | 0 |
+| Załączniki | 30 | 0 |
 
 ## Pełna lista sprawdzeń
 
@@ -70,28 +72,28 @@ Najważniejsze zdarzenia:
 
 **Dokumenty**
 
-- ✓ nowa wersja nie kasuje starej: obie wersje pobierają się poprawnie (13/13)
-- ✓ dokument po terminie ważności trafia do archiwalnych, ważny pozostaje w aktualnych (1009/1009)
+- ✓ nowa wersja nie kasuje starej: obie wersje pobierają się poprawnie (14/14)
+- ✓ dokument po terminie ważności trafia do archiwalnych, ważny pozostaje w aktualnych (978/978)
 - ✓ nazwa pliku z polskimi znakami zachowana (1/1)
 - ✓ rejestr zmian dokumentu notuje dodanie, pobrania i zmiany uprawnień z osobą i datą (1/1)
 - ✓ załącznik z wiadomości zapisuje się do rejestru dokumentów przy kontrahencie (1/1)
-- ✓ dokument z szablonu jest plikiem PDF i trafia do kartoteki kontrahenta (15/15)
-- ✓ numer dokumentu we wzorze DIAGNOS/D/n/RRRRMMDD (15/15)
+- ✓ dokument z szablonu jest plikiem PDF i trafia do kartoteki kontrahenta (16/16)
+- ✓ numer dokumentu we wzorze DIAGNOS/D/n/RRRRMMDD (16/16)
 
 **E-mail**
 
 - ✓ bez konfiguracji SMTP wiadomość czeka i interfejs nie zgłasza sukcesu (3/3)
-- ✓ tej samej wiadomości nie da się wysłać drugi raz (113/113)
+- ✓ tej samej wiadomości nie da się wysłać drugi raz (100/100)
 - ✓ system zgłasza brak konfiguracji SMTP i SMS (1/1)
 - ✓ bez konfiguracji nic nie zostaje wysłane (1/1)
 - ✓ hasło SMTP nie wraca do przeglądarki (1/1)
 - ✓ wiadomość testowa SMTP dociera (1/1)
 - ✓ po skonfigurowaniu kanałów zaległe wiadomości wychodzą z kolejki (1/1)
-- ✓ wysyłka z korespondencji kończy się statusem „wysłano” (110/110)
+- ✓ wysyłka z korespondencji kończy się statusem „wysłano” (97/97)
 - ✓ w czasie awarii wiadomości nie giną: są w kolejce jako błąd wysyłki lub oczekujące (1/1)
 - ✓ nieudana wysyłka ma zapisany opis błędu (1/1)
-- ✓ każda wiadomość dociera do adresata dokładnie raz (także po awarii i ponowieniu) (190/190)
-- ✓ system nie wysyła wiadomości, których nikt nie zlecił (190/190)
+- ✓ każda wiadomość dociera do adresata dokładnie raz (także po awarii i ponowieniu) (177/177)
+- ✓ system nie wysyła wiadomości, których nikt nie zlecił (177/177)
 - ✓ na koniec w kolejce nie zostają niewysłane wiadomości (1/1)
 
 **Import**
@@ -122,7 +124,7 @@ Najważniejsze zdarzenia:
 - ✓ kartoteka kontrahenta ma komplet zakładek (3/3)
 - ✓ zakładka „Korespondencja” kartoteki pokazuje liczbę zgodną z księgą (3/3)
 - ✓ zakładka „Osoby” kartoteki pokazuje liczbę zgodną z księgą (3/3)
-- ✓ zakładka kartoteki otwiera się bez błędów (39/39)
+- ✓ zakładka kartoteki otwiera się bez błędów (36/36)
 - ✓ kartoteka projektu otwiera się bez błędów (3/3)
 - ✓ grupowanie rejestru po mieście: liczniki grup sumują się do liczby rekordów (1/1)
 - ✓ przypomnienie nie wyskakuje przed czasem (1/1)
@@ -130,8 +132,8 @@ Najważniejsze zdarzenia:
 
 **Kontrahenci**
 
-- ✓ kartoteka zwraca dokładnie zapisane dane (w tym pola dodatkowe) (111/111)
-- ✓ data ostatniego kontaktu w rejestrze = najnowsza korespondencja (256/256)
+- ✓ kartoteka zwraca dokładnie zapisane dane (w tym pola dodatkowe) (104/104)
+- ✓ data ostatniego kontaktu w rejestrze = najnowsza korespondencja (262/262)
 
 **Korespondencja seryjna**
 
@@ -146,11 +148,11 @@ Najważniejsze zdarzenia:
 **Korespondencja wewnętrzna**
 
 - ✓ adresat widzi wiadomość dopiero od wyznaczonego terminu (i tylko nieprzeczytane) (5775/5775)
-- ✓ system rozróżnia wiadomość natychmiastową i zaplanowaną (42/42)
+- ✓ system rozróżnia wiadomość natychmiastową i zaplanowaną (39/39)
 
 **Korespondencja**
 
-- ✓ numer nadawany automatycznie we wzorze DIAGNOS/n/RRRRMMDD (323/323)
+- ✓ numer nadawany automatycznie we wzorze DIAGNOS/n/RRRRMMDD (302/302)
 - ✓ numery korespondencji są unikalne (25/25)
 - ✓ równoczesne zapisy dostają różne numery (1/1)
 
@@ -168,13 +170,13 @@ Najważniejsze zdarzenia:
 
 **Projekty**
 
-- ✓ projekt zapisuje etapy (19/19)
+- ✓ projekt zapisuje etapy (22/22)
 
 **Przypomnienia**
 
-- ✓ przypomnienie pojawia się w porę i czeka na potwierdzenie (366/366)
-- ✓ nie pojawia się przypomnienie, którego nie powinno być (przed czasem, po potwierdzeniu, do zamkniętego zadania) (366/366)
-- ✓ odłożone przypomnienie znika do wyznaczonej pory (83/83)
+- ✓ przypomnienie pojawia się w porę i czeka na potwierdzenie (373/373)
+- ✓ nie pojawia się przypomnienie, którego nie powinno być (przed czasem, po potwierdzeniu, do zamkniętego zadania) (373/373)
+- ✓ odłożone przypomnienie znika do wyznaczonej pory (85/85)
 
 **Raporty automatyczne**
 
@@ -214,9 +216,9 @@ Najważniejsze zdarzenia:
 **SMS**
 
 - ✓ bez skonfigurowanej bramki SMS czeka w kolejce (1/1)
-- ✓ wysyłka SMS kończy się statusem „wysłano” (21/21)
-- ✓ każdy SMS trafia do bramki dokładnie raz (28/28)
-- ✓ system nie wysyła SMS-ów, których nikt nie zlecił (28/28)
+- ✓ wysyłka SMS kończy się statusem „wysłano” (27/27)
+- ✓ każdy SMS trafia do bramki dokładnie raz (33/33)
+- ✓ system nie wysyła SMS-ów, których nikt nie zlecił (33/33)
 - ✓ SMS ma ustawionego nadawcę i polskie znaki (1/1)
 
 **Spójność danych**
@@ -232,7 +234,7 @@ Najważniejsze zdarzenia:
 
 **Stabilność**
 
-- ✓ poprawna operacja operatora zostaje przyjęta (9288/9288)
+- ✓ poprawna operacja operatora zostaje przyjęta (9188/9188)
 
 **Uprawnienia do dokumentów**
 
@@ -287,8 +289,8 @@ Najważniejsze zdarzenia:
 
 **Zadania automatyczne**
 
-- ✓ nowy kontrahent → jedno zadanie „kontakt” dla prowadzącego za 3 dni o 10:00 (141/141)
-- ✓ reguła administratora: zamówienie → zadanie dla autora następnego dnia 08:30 (42/42)
+- ✓ nowy kontrahent → jedno zadanie „kontakt” dla prowadzącego za 3 dni o 10:00 (134/134)
+- ✓ reguła administratora: zamówienie → zadanie dla autora następnego dnia 08:30 (55/55)
 
 **Zadania cykliczne**
 
@@ -297,22 +299,35 @@ Najważniejsze zdarzenia:
 
 **Zadania**
 
-- ✓ w systemie nie ma zadań, których nikt nie utworzył (5369/5369)
-- ✓ zmiana postępu ustawia właściwy procent i status (165/165)
-- ✓ przesunięcie w kalendarzu zachowuje czas trwania (37/37)
+- ✓ w systemie nie ma zadań, których nikt nie utworzył (5291/5291)
+- ✓ zmiana postępu ustawia właściwy procent i status (163/163)
+- ✓ przesunięcie w kalendarzu zachowuje czas trwania (28/28)
 
 **Zamówienia i sprzedaż**
 
-- ✓ wartość netto sprzedaży = suma pozycji (97/97)
-- ✓ wartość brutto sprzedaży = suma pozycji z VAT (97/97)
-- ✓ wartość netto zamówienia = suma pozycji (42/42)
-- ✓ wartość brutto zamówienia = suma pozycji z VAT (42/42)
-- ✓ numer zamówienia we wzorze DIAGNOS/ZAM/n/RRRR (42/42)
+- ✓ wartość netto sprzedaży = suma pozycji (88/88)
+- ✓ wartość brutto sprzedaży = suma pozycji z VAT (88/88)
+- ✓ wartość netto zamówienia = suma pozycji (55/55)
+- ✓ wartość brutto zamówienia = suma pozycji z VAT (55/55)
+- ✓ numer zamówienia we wzorze DIAGNOS/ZAM/n/RRRR (55/55)
+
+**Zapytania i przetargi**
+
+- ✓ sprawa zapisuje rodzaj, znak, źródło, datę wpływu i termin składania ofert (1/1)
+- ✓ termin składania ofert tworzy zadanie dla opiekuna z przypomnieniem dobę wcześniej (1/1)
+- ✓ zmiana terminu ofert przesuwa zadanie zamiast tworzyć drugie (1/1)
+- ✓ dokumentacja sprawy: dokument z kolejną wersją jest przy sprawie, a pierwotna wersja pozostaje dostępna (1/1)
+- ✓ historia sprawy zawiera założenie, zmiany statusu i terminu, dokumenty z wersjami, korespondencję i zadania (1/1)
+- ✓ historia jest uporządkowana od najnowszych zdarzeń (1/1)
+- ✓ historia kontrahenta pokazuje jego sprawy i korespondencję (1/1)
+- ✓ historia pokazuje dokumenty tylko osobom z dostępem do nich (1/1)
+- ✓ po rozstrzygnięciu sprawa ma wynik, a niewykonane zadanie na termin ofert znika (1/1)
+- ✓ niepoprawny rodzaj sprawy jest odrzucany (1/1)
 
 **Załączniki**
 
-- ✓ załącznik korespondencji pobiera się w niezmienionej postaci i pod właściwą nazwą (39/39)
+- ✓ załącznik korespondencji pobiera się w niezmienionej postaci i pod właściwą nazwą (30/30)
 
 ## Etap w przeglądarce
 
-Przejrzano 96 ekranów na danych z symulacji; zrzuty: 21 plików w katalogu `ekrany/`.
+Przejrzano 93 ekranów na danych z symulacji; zrzuty: 21 plików w katalogu `ekrany/`.

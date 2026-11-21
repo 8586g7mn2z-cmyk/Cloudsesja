@@ -10,6 +10,7 @@ import { Check, ErrorBox, Input, Loading, Modal, Notice, Progress, Select, Statu
 import { Attachments, canPreview } from '../components/Attachments';
 import { ContractorFields } from './ContractorFields';
 import { CorrespondenceForm } from './CorrespondenceForm';
+import { History } from '../components/History';
 import { TaskForm } from './TaskForm';
 import { correspondenceColumns, orderColumns, projectColumns, saleColumns, taskColumns } from './columns';
 import { OrderForm } from './Orders';
@@ -105,7 +106,7 @@ export function ContractorCard() {
   const { id: idStr } = useParams();
   const id = Number(idStr);
   const nav = useNavigate();
-  const { toast, confirm, isManager, reloadContractors, dicts } = useApp();
+  const { toast, confirm, isManager, reloadContractors, dicts, status } = useApp();
   const [tab, setTab] = useState('details');
   const card = useApi<any>(`/api/contractors/${id}`, [id]);
   const [v, setV] = useState<any>(null);
@@ -183,7 +184,7 @@ export function ContractorCard() {
   const sources = [
     { key: 'kartoteka', label: 'Dodane do kartoteki' },
     { key: 'korespondencja', label: 'Z korespondencji' },
-    { key: 'projekt', label: 'Z projektów' },
+    { key: 'projekt', label: 'Ze spraw' },
     { key: 'dokumenty', label: 'Z rejestru dokumentów' },
   ];
   const memberGroups = (dicts.contractor_group ?? []).filter((g) => (c.groups ?? []).includes(g.id));
@@ -228,10 +229,10 @@ export function ContractorCard() {
           { key: 'contacts', label: 'Osoby', count: contacts.data?.filter((p) => p.active).length },
           { key: 'corr', label: 'Korespondencja', count: corr.data?.length },
           { key: 'tasks', label: 'Zadania', count: tasks.data?.length },
-          { key: 'projects', label: 'Projekty', count: projects.data?.length },
-          { key: 'orders', label: 'Zamówienia', count: orders.data?.length },
-          { key: 'sales', label: 'Sprzedaż', count: sales.data?.length },
+          { key: 'projects', label: 'Zapytania i przetargi', count: projects.data?.length },
+          ...(status.modules?.sales ? [{ key: 'orders', label: 'Zamówienia', count: orders.data?.length }, { key: 'sales', label: 'Sprzedaż', count: sales.data?.length }] : []),
           { key: 'att', label: 'Załączniki', count: allAtts.length },
+          { key: 'history', label: 'Historia' },
           { key: 'notes', label: 'Notatki', count: notes.data?.length },
           { key: 'groups', label: 'Grupy', count: memberGroups.length + (c.group_id ? 1 : 0) },
           { key: 'www', label: 'WWW' },
@@ -394,8 +395,9 @@ export function ContractorCard() {
         {tab === 'tasks' && (
           <DataTable id="card-tasks" title={`Zadania — ${c.short_name || c.name}`} columns={taskColumns} rows={tasks.data} loading={tasks.loading} error={tasks.error} onOpen={(r) => setModal({ type: 'task', id: r.id })} rowClass={(r) => (r.overdue ? 'alert' : !r.is_open ? 'muted-row' : '')} toolbar={<button className="btn primary" onClick={() => setModal({ type: 'task' })}><Plus size={14} /> Nowe zadanie</button>} />
         )}
+        {tab === 'history' && <History contractorId={id} onOpen={(r) => (r.kind === 'project' ? nav(`/projekty/${r.id}`) : r.kind === 'correspondence' ? setModal({ type: 'corr', id: r.id }) : r.kind === 'task' ? setModal({ type: 'task', id: r.id }) : window.open(`/api/documents/${r.id}/file`, '_blank'))} reloadKey={`${corr.data?.length}-${tasks.data?.length}-${allAtts.length}`} />}
         {tab === 'projects' && (
-          <DataTable id="card-projects" title={`Projekty — ${c.short_name || c.name}`} columns={projectColumns} rows={projects.data} loading={projects.loading} onOpen={(r) => nav(`/projekty/${r.id}`)} toolbar={<button className="btn primary" onClick={() => setModal({ type: 'project' })}><Plus size={14} /> Nowy projekt</button>} />
+          <DataTable id="card-projects" title={`Zapytania i przetargi — ${c.short_name || c.name}`} columns={projectColumns} rows={projects.data} loading={projects.loading} onOpen={(r) => nav(`/projekty/${r.id}`)} toolbar={<button className="btn primary" onClick={() => setModal({ type: 'project' })}><Plus size={14} /> Nowe zapytanie / przetarg</button>} />
         )}
         {tab === 'orders' && (
           <DataTable id="card-orders" title={`Zamówienia — ${c.short_name || c.name}`} columns={orderColumns} rows={orders.data} loading={orders.loading} onOpen={(r) => setModal({ type: 'order', id: r.id })} toolbar={<button className="btn primary" onClick={() => setModal({ type: 'order' })}><Plus size={14} /> Nowe zamówienie</button>} />

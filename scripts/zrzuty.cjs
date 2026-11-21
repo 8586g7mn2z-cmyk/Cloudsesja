@@ -61,7 +61,8 @@ fs.mkdirSync(OUT, { recursive: true });
   await p.locator('.dt-row').first().dblclick();
   await p.waitForSelector('text=Kartoteka:');
   await shot('04-kartoteka-szczegoly');
-  for (const [tab, name] of [['Osoby', '05-kartoteka-osoby'], ['Korespondencja', '06-kartoteka-korespondencja'], ['Zadania', '07-kartoteka-zadania'], ['Sprzedaż', '08-kartoteka-sprzedaz'], ['Załączniki', '09-kartoteka-zalaczniki'], ['Lokalizacja', '10-kartoteka-lokalizacja']]) {
+  for (const [tab, name] of [['Osoby', '05-kartoteka-osoby'], ['Korespondencja', '06-kartoteka-korespondencja'], ['Zadania', '07-kartoteka-zadania'], ['Sprzedaż', '08-kartoteka-sprzedaz'], ['Historia', '08b-kartoteka-historia'], ['Załączniki', '09-kartoteka-zalaczniki'], ['Lokalizacja', '10-kartoteka-lokalizacja']]) {
+    if (!(await p.getByRole('tab', { name: new RegExp(`^${tab}`) }).count())) continue; // zakładka wyłączonego modułu
     await p.getByRole('tab', { name: new RegExp(`^${tab}`) }).click();
     await shot(name);
   }
@@ -96,10 +97,23 @@ fs.mkdirSync(OUT, { recursive: true });
   await go('/zadania-cykliczne');
   await shot('18-zadania-cykliczne');
 
+  // zapytania i przetargi: rejestr, kartoteka sprawy, dokumentacja, historia
   await go('/projekty');
-  await shot('19-projekty');
-  await p.locator('.dt-row').first().dblclick();
-  await shot('20-kartoteka-projektu');
+  await p.locator('.dt-row').nth(1).click();
+  await shot('19-zapytania-i-przetargi');
+  await p.selectOption('select[aria-label="Grupuj według"]', { label: 'Status' });
+  await shot('19b-zapytania-grupowanie-status');
+  await p.locator('.chip button[title="Usuń grupowanie"]').first().click();
+  await p.locator('.dt-row').filter({ hasText: 'Przetarg' }).first().dblclick();
+  await p.waitForSelector('text=Termin składania ofert');
+  await shot('20-kartoteka-sprawy');
+  await p.getByRole('tab', { name: /^Dokumentacja/ }).click();
+  await shot('20b-sprawa-dokumentacja');
+  await p.getByRole('tab', { name: 'Historia' }).click();
+  await shot('20c-sprawa-historia');
+  await p.getByRole('button', { name: 'Edytuj' }).click();
+  await shot('20d-sprawa-formularz');
+  await closeModal();
   await go('/zamowienia');
   await p.locator('.dt-row').first().dblclick();
   await shot('21-zamowienie');
@@ -122,6 +136,7 @@ fs.mkdirSync(OUT, { recursive: true });
 
   await go('/raporty');
   for (const [tab, name] of [['Brak aktywności', '27-raport-brak-aktywnosci'], ['Skuteczność handlowców', '28-raport-skutecznosc-handlowcow'], ['Statystyka zadań', '29-raport-statystyka-zadan'], ['Aktywność operatora', '30-raport-aktywnosc-operatora'], ['Czas pracy', '31-raport-czas-pracy']]) {
+    if (!(await p.getByRole('tab', { name: tab }).count())) continue; // raport wyłączonego modułu
     await p.getByRole('tab', { name: tab }).click();
     await p.getByRole('button', { name: 'Generuj raport' }).click();
     await p.waitForTimeout(500);
@@ -138,12 +153,12 @@ fs.mkdirSync(OUT, { recursive: true });
   await go('/');
   await p.getByRole('button', { name: 'Samouczek' }).click();
   await shot('43-samouczek-start');
-  for (let i = 0; i < 5; i++) await p.getByRole('button', { name: 'Dalej' }).click();
+  for (let i = 0; i < 4; i++) await p.getByRole('button', { name: 'Dalej' }).click();
   await p.waitForTimeout(600);
-  await shot('44-samouczek-grupowanie');
-  for (let i = 0; i < 3; i++) await p.getByRole('button', { name: 'Dalej' }).click();
+  await shot('44-samouczek-zapytania');
+  for (let i = 0; i < 2; i++) await p.getByRole('button', { name: 'Dalej' }).click();
   await p.waitForTimeout(600);
-  await shot('45-samouczek-korespondencja');
+  await shot('45-samouczek-kartoteka-sprawy');
   await p.keyboard.press('Escape');
 
   // administrator

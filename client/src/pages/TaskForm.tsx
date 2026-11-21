@@ -215,10 +215,10 @@ export function TaskForm({ id, defaults, onClose, onSaved }: { id?: number | nul
             <Select value={v.contact_id} onChange={set('contact_id')} options={contacts.map((c) => ({ value: c.id, label: `${c.first_name ?? ''} ${c.last_name}`.trim() + (c.phone ? ` (tel. ${c.phone})` : '') }))} empty={v.contractor_id ? '—' : 'najpierw wybierz kontrahenta'} />
             <label className="lbl">Korespondencja</label>
             <Input readOnly value={v.correspondence_number ?? (v.correspondence_id ? `#${v.correspondence_id}` : '')} placeholder="(brak powiązania)" />
-            <label className="lbl">Projekt</label>
-            <Combo items={projItems} value={v.project_id} onChange={(pid) => setV((p: any) => ({ ...p, project_id: pid, stage_id: null }))} placeholder="wyszukaj projekt…" />
-            <label className="lbl">Etap projektu</label>
-            <Select value={v.stage_id} onChange={set('stage_id')} options={stageOpts} empty={v.project_id ? '—' : 'najpierw wybierz projekt'} />
+            <label className="lbl">Sprawa</label>
+            <Combo items={projItems} value={v.project_id} onChange={(pid) => setV((p: any) => ({ ...p, project_id: pid, stage_id: null }))} placeholder="zapytanie lub przetarg…" />
+            <label className="lbl">Etap sprawy</label>
+            <Select value={v.stage_id} onChange={set('stage_id')} options={stageOpts} empty={v.project_id ? '—' : 'najpierw wybierz sprawę'} />
             <label className="lbl">Opis</label>
             <div className="span3"><Textarea rows={4} value={v.description} onChange={(e) => set('description')(e.target.value)} /></div>
             <label className="lbl">Przypomnienie</label>

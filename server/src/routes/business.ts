@@ -1,8 +1,8 @@
 import type { FastifyInstance } from 'fastify';
 import type { Ctx } from '../context.js';
 import { isManager, requireUser, type User } from '../auth.js';
-import { audit, bad, forbidden, makeNumber, notFound, nowIso, round2, str, todayIso, toInt, toNum } from '../util.js';
-import { fireEvent } from '../services/tasks.js';
+import { audit, bad, forbidden, makeNumber, notFound, nowIso, round2, str, todayIso, toInt, toNum, addMinutesIso } from '../util.js';
+import { createTask, fireEvent, updateTask } from '../services/tasks.js';
 import { attachmentsFor } from './contractors.js';
 
 /** Poprawna data kalendarzowa w formacie RRRR-MM-DD. */
@@ -12,6 +12,11 @@ function isDate(v: any): boolean {
   const t = new Date(Date.UTC(y, m - 1, d));
   return t.getUTCFullYear() === y && t.getUTCMonth() === m - 1 && t.getUTCDate() === d;
 }
+
+export const CASE_KINDS = ['zapytanie', 'przetarg', 'projekt'];
+export const CASE_KIND_LABELS: Record<string, string> = { zapytanie: 'Zapytanie ofertowe', przetarg: 'Przetarg', projekt: 'Projekt' };
+export const CASE_RESULTS = ['wygrane', 'przegrane', 'unieważnione', 'rezygnacja'];
+const fmtDeadline = (v?: string | null) => (v ? `${v.slice(8, 10)}.${v.slice(5, 7)}.${v.slice(0, 4)} ${v.slice(11, 16)}` : '—');
 
 interface ItemIn {
   product_id?: number | null;
@@ -50,6 +55,7 @@ export async function businessRoutes(app: FastifyInstance, ctx: Ctx) {
         (SELECT COUNT(*) FROM project_stages st WHERE st.project_id = p.id) AS stages_count,
         (SELECT COUNT(*) FROM project_stages st WHERE st.project_id = p.id AND st.status = 'zakończony') AS stages_done,
         (SELECT COUNT(*) FROM tasks t WHERE t.project_id = p.id) AS tasks_count,
+        (SELECT COUNT(*) FROM documents d WHERE d.project_id = p.id) + (SELECT COUNT(*) FROM attachments a WHERE a.owner_type = 'project' AND a.owner_id = p.id) AS docs_count,
         (SELECT COUNT(*) FROM correspondence k WHERE k.project_id = p.id) AS corr_count
        FROM projects p LEFT JOIN contractors c ON c.id = p.contractor_id LEFT JOIN operators o ON o.id = p.manager_id
        LEFT JOIN dict_items s ON s.id = p.status_id ${where} ORDER BY p.created_at DESC`,
@@ -73,9 +79,27 @@ export async function businessRoutes(app: FastifyInstance, ctx: Ctx) {
     return db.all('SELECT id, project_id, name, status FROM project_stages ORDER BY project_id, sort, id');
   });
   const projectData = (b: any) => {
-    if (!str(b.name)) throw bad('Podaj nazwę projektu.');
+    if (!str(b.name)) throw bad('Podaj nazwę (przedmiot) zapytania lub przetargu.');
     if (b.start_date && b.end_date && b.end_date < b.start_date) throw bad('Termin zakończenia jest wcześniejszy niż rozpoczęcia.');
+    const kind = b.kind == null || b.kind === '' ? 'zapytanie' : b.kind;
+    if (!CASE_KINDS.includes(kind)) throw bad('Wybierz rodzaj: zapytanie, przetarg lub projekt.');
+    const result = str(b.result);
+    if (result && !CASE_RESULTS.includes(result)) throw bad('Niepoprawny wynik postępowania.');
+    for (const [k, label] of [['received_date', 'Data wpływu'], ['result_date', 'Data rozstrzygnięcia'], ['start_date', 'Rozpoczęcie'], ['end_date', 'Zakończenie']]) if (str(b[k]) && !isDate(b[k])) throw bad(`${label}: niepoprawna data.`);
+    let deadline = str(b.submit_deadline);
+    if (deadline) {
+      if (/^\d{4}-\d{2}-\d{2}$/.test(deadline)) deadline += 'T12:00:00';
+      else if (deadline.length === 16) deadline += ':00';
+      if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/.test(deadline) || !isDate(deadline.slice(0, 10))) throw bad('Termin składania ofert: niepoprawna data lub godzina.');
+    }
     return {
+      kind,
+      ref_no: str(b.ref_no),
+      source: str(b.source),
+      received_date: str(b.received_date),
+      submit_deadline: deadline,
+      result,
+      result_date: str(b.result_date),
       name: str(b.name),
       contractor_id: toInt(b.contractor_id),
       manager_id: toInt(b.manager_id),
@@ -105,6 +129,37 @@ export async function businessRoutes(app: FastifyInstance, ctx: Ctx) {
       db.run('DELETE FROM project_stages WHERE id = ?', o.id);
     }
   };
+  /**
+   * Termin składania ofert ma własne zadanie dla opiekuna (z przypomnieniem dzień wcześniej).
+   * Zadanie powstaje, przesuwa się i znika razem z terminem; wykonanego już nie ruszamy.
+   */
+  const syncDeadlineTask = (projectId: number, actorId: number) => {
+    const p = db.get<any>('SELECT * FROM projects WHERE id = ?', projectId)!;
+    const existing = p.deadline_task_id ? db.get<any>('SELECT t.*, s.code FROM tasks t JOIN dict_items s ON s.id = t.status_id WHERE t.id = ?', p.deadline_task_id) : null;
+    const open = existing && existing.code !== 'done' && existing.code !== 'cancelled';
+    if (!p.submit_deadline || !p.manager_id || p.result) {
+      if (existing && open && existing.progress === 0) db.run('DELETE FROM tasks WHERE id = ?', existing.id);
+      if (!existing || (open && existing.progress === 0)) db.update('projects', projectId, { deadline_task_id: null });
+      return;
+    }
+    const input = {
+      title: `Termin składania ofert: ${p.name}`,
+      description: `${CASE_KIND_LABELS[p.kind] ?? 'Sprawa'} ${p.number}${p.ref_no ? ` (znak ${p.ref_no})` : ''}. Termin złożenia oferty: ${p.submit_deadline.slice(0, 16).replace('T', ' ')}.`,
+      start_at: addMinutesIso(p.submit_deadline, -60),
+      end_at: p.submit_deadline,
+      operator_ids: [p.manager_id],
+      principal_id: actorId,
+      priority: 4,
+      contractor_id: p.contractor_id,
+      project_id: projectId,
+      remind_before_min: 23 * 60,
+      remind_inapp: true,
+      remind_email: true,
+    };
+    if (existing && open) updateTask(ctx, existing.id, { ...input, progress: existing.progress, status_id: existing.status_id });
+    else if (!existing) db.update('projects', projectId, { deadline_task_id: createTask(ctx, input, actorId) });
+  };
+
   app.post('/api/projects', async (req) => {
     const u = requireUser(req);
     const b = req.body as any;
@@ -112,6 +167,7 @@ export async function businessRoutes(app: FastifyInstance, ctx: Ctx) {
       const number = makeNumber(db, 'PRJ');
       const id = db.insert('projects', { ...projectData(b), manager_id: toInt(b.manager_id) ?? u.id, number, created_at: nowIso(), created_by: u.id });
       saveStages(id, b.stages);
+      syncDeadlineTask(id, u.id);
       fireEvent(ctx, 'project.created', { project_id: id, contractor_id: toInt(b.contractor_id), number, actor_id: u.id });
       return id;
     });
@@ -121,13 +177,22 @@ export async function businessRoutes(app: FastifyInstance, ctx: Ctx) {
   app.put('/api/projects/:id', async (req) => {
     const u = requireUser(req);
     const id = Number((req.params as any).id);
-    if (!db.get('SELECT id FROM projects WHERE id = ?', id)) throw notFound();
+    const before = db.get<any>('SELECT p.*, s.name AS status_name FROM projects p LEFT JOIN dict_items s ON s.id = p.status_id WHERE p.id = ?', id);
+    if (!before) throw notFound();
     const b = req.body as any;
     db.tx(() => {
       db.update('projects', id, projectData(b));
       saveStages(id, b.stages);
+      syncDeadlineTask(id, u.id);
     });
-    audit(db, u.id, 'project', id, 'zmiana');
+    // najważniejsze zmiany trafiają do historii sprawy czytelnym opisem
+    const after = db.get<any>('SELECT p.*, s.name AS status_name FROM projects p LEFT JOIN dict_items s ON s.id = p.status_id WHERE p.id = ?', id)!;
+    const changes: string[] = [];
+    if (before.status_name !== after.status_name) changes.push(`status: ${before.status_name ?? '—'} → ${after.status_name ?? '—'}`);
+    if ((before.result ?? '') !== (after.result ?? '')) changes.push(`wynik: ${before.result || '—'} → ${after.result || '—'}`);
+    if ((before.submit_deadline ?? '') !== (after.submit_deadline ?? '')) changes.push(`termin składania ofert: ${fmtDeadline(before.submit_deadline)} → ${fmtDeadline(after.submit_deadline)}`);
+    if (before.manager_id !== after.manager_id) changes.push('zmiana opiekuna');
+    audit(db, u.id, 'project', id, changes.length ? 'zmiana' : 'zmiana danych', changes.length ? changes.join('; ') : undefined);
     return { id };
   });
   app.delete('/api/projects/:id', async (req) => {
@@ -135,7 +200,10 @@ export async function businessRoutes(app: FastifyInstance, ctx: Ctx) {
     if (!isManager(u)) throw forbidden();
     const id = Number((req.params as any).id);
     const n = db.get<any>('SELECT (SELECT COUNT(*) FROM correspondence WHERE project_id = ?) + (SELECT COUNT(*) FROM tasks WHERE project_id = ?) + (SELECT COUNT(*) FROM documents WHERE project_id = ?) AS n', id, id, id)!.n;
-    if (n) throw bad('Projekt ma powiązaną korespondencję, zadania lub dokumenty i nie może zostać usunięty.');
+    const dt = db.get<any>('SELECT deadline_task_id AS t FROM projects WHERE id = ?', id)?.t;
+    const others = dt ? db.get<any>('SELECT COUNT(*) AS n FROM tasks WHERE project_id = ? AND id <> ?', id, dt)!.n + db.get<any>('SELECT (SELECT COUNT(*) FROM correspondence WHERE project_id = ?) + (SELECT COUNT(*) FROM documents WHERE project_id = ?) AS n', id, id)!.n : n;
+    if (others) throw bad('Sprawa ma powiązaną korespondencję, zadania lub dokumenty i nie może zostać usunięta.');
+    if (dt) db.run('DELETE FROM tasks WHERE id = ?', dt);
     db.run('DELETE FROM projects WHERE id = ?', id);
     return { ok: true };
   });

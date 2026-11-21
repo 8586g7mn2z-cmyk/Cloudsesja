@@ -350,3 +350,21 @@ table.grid input.input, table.grid select.select { height: 24px; }
 @media print { .tour, .tour-invite { display: none; } }
 
 .overlay.confirm { z-index: 250; }
+
+/* ---------- Historia (oś czasu) ---------- */
+.timeline { list-style: none; margin: 0; padding: 0; }
+.tl-day { font-size: var(--fs-xs); font-weight: 600; color: var(--navy); background: var(--navy-tint); padding: 2px 8px; margin: 8px 0 2px; letter-spacing: 0.03em; }
+.tl-item { display: flex; align-items: flex-start; gap: 8px; padding: 5px 8px; border-bottom: 1px solid var(--line); }
+.tl-time { width: 38px; color: var(--text-2); font-variant-numeric: tabular-nums; flex-shrink: 0; }
+.tl-ico { width: 20px; height: 20px; border-radius: 3px; display: flex; align-items: center; justify-content: center; background: var(--bg-subtle); color: var(--navy-3); flex-shrink: 0; }
+.tl-ico.dokument, .tl-ico.załącznik { background: var(--navy-tint); color: var(--navy); }
+.tl-ico.sprawa, .tl-ico.kontrahent { background: var(--navy); color: #fff; }
+.tl-body { flex: 1; min-width: 0; }
+.tl-title { font-weight: 500; }
+.tl-details { white-space: pre-wrap; overflow-wrap: anywhere; }
+.tl-who { white-space: nowrap; flex-shrink: 0; }
+.case-facts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0; border: 1px solid var(--line); margin-bottom: 12px; }
+.case-facts > div { padding: 7px 10px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); min-width: 0; }
+.case-facts dt { font-size: var(--fs-xs); color: var(--text-2); text-transform: uppercase; letter-spacing: 0.04em; }
+.case-facts dd { margin: 1px 0 0; font-weight: 500; overflow-wrap: anywhere; }
+.deadline-soon { color: var(--accent); font-weight: 600; }

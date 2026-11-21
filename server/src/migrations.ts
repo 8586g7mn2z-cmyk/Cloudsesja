@@ -602,7 +602,7 @@ export const dictLabels: Record<string, string> = {
   corr_topic: 'Tematy korespondencji',
   doc_type: 'Typy dokumentów',
   task_status: 'Statusy zadań',
-  project_status: 'Statusy projektów',
+  project_status: 'Statusy zapytań i przetargów',
   order_status: 'Statusy zamówień',
 };
 
@@ -700,5 +700,37 @@ export const migrations: Migration[] = [
     // nie jest gubione przy późniejszych zmianach zadania.
     version: 2,
     sql: `ALTER TABLE reminders ADD COLUMN base_at TEXT; UPDATE reminders SET base_at = remind_at;`,
+  },
+  {
+    // Sprawy: zapytania ofertowe i przetargi (rozszerzenie dawnych „projektów") oraz przełączniki modułów.
+    version: 3,
+    sql: `
+      ALTER TABLE projects ADD COLUMN kind TEXT NOT NULL DEFAULT 'projekt';
+      ALTER TABLE projects ADD COLUMN ref_no TEXT;
+      ALTER TABLE projects ADD COLUMN source TEXT;
+      ALTER TABLE projects ADD COLUMN received_date TEXT;
+      ALTER TABLE projects ADD COLUMN submit_deadline TEXT;
+      ALTER TABLE projects ADD COLUMN result TEXT;
+      ALTER TABLE projects ADD COLUMN result_date TEXT;
+      ALTER TABLE projects ADD COLUMN deadline_task_id INTEGER;
+    `,
+    run: (db) => {
+      const rename = (dict: string, from: string, to: string) => db.run('UPDATE dict_items SET name = ? WHERE dict = ? AND name = ?', to, dict, from);
+      rename('project_status', 'Planowany', 'Nowe');
+      rename('project_status', 'W realizacji', 'W przygotowaniu');
+      rename('project_status', 'Wstrzymany', 'Wstrzymane');
+      rename('project_status', 'Zakończony', 'Zakończone');
+      const add = (dict: string, name: string, sort: number) => {
+        if (!db.get('SELECT id FROM dict_items WHERE dict = ? AND name = ?', dict, name)) db.insert('dict_items', { dict, name, sort });
+      };
+      db.run("UPDATE dict_items SET sort = sort * 10 WHERE dict = 'project_status'");
+      add('project_status', 'Oferta złożona', 15);
+      add('project_status', 'Rozstrzygnięte', 16);
+      add('doc_type', 'Zapytanie ofertowe', 20);
+      add('doc_type', 'Dokumentacja przetargowa', 21);
+      add('doc_type', 'Oferta przetargowa', 22);
+      for (const n of ['Zapytania ofertowe', 'Przetargi']) if (!db.get('SELECT id FROM doc_folders WHERE name = ?', n)) db.insert('doc_folders', { name: n, sort: -1 });
+      if (!db.get("SELECT key FROM settings WHERE key = 'modules'")) db.run("INSERT INTO settings (key, value) VALUES ('modules', ?)", JSON.stringify({ sales: false, mailing: false, templates: false, task_tools: false, internal: false }));
+    },
   },
 ];

@@ -62,7 +62,7 @@ export function OrderForm({ id, defaults, onClose, onSaved }: { id?: number | nu
         <DictSelect dict="order_status" value={v.status_id} onChange={set('status_id')} />
         <label className="lbl">Handlowiec</label>
         <OperatorSelect value={v.operator_id} onChange={set('operator_id')} />
-        <label className="lbl">Projekt</label>
+        <label className="lbl">Sprawa</label>
         <Combo items={(projects.data ?? []).map((p) => ({ id: p.id, label: p.name, sub: p.number }))} value={v.project_id} onChange={set('project_id')} />
         <label className="lbl">Uwagi</label>
         <Textarea rows={1} value={v.notes ?? ''} onChange={set('notes')} />

@@ -258,10 +258,10 @@ export function CorrespondenceForm({ id, defaults, onClose, onSaved }: { id?: nu
                 options={contacts.map((c) => ({ value: c.id, label: `${c.first_name ?? ''} ${c.last_name}`.trim() + ` (tel: ${c.phone ?? ''} gsm: ${c.mobile ?? ''}${c.email ? ', ' + c.email : ''})` + (c.position ? ` — ${c.position}` : '') }))}
               />
             </div>
-            <label className="lbl">Projekt</label>
-            <Combo items={projItems} value={v.project_id} onChange={(pid) => setV((p: any) => ({ ...p, project_id: pid, stage_id: null }))} placeholder="wyszukaj projekt…" />
-            <label className="lbl">Etap projektu</label>
-            <Select value={v.stage_id} onChange={set('stage_id')} options={stageOpts} empty={v.project_id ? '—' : 'najpierw wybierz projekt'} />
+            <label className="lbl">Sprawa</label>
+            <Combo items={projItems} value={v.project_id} onChange={(pid) => setV((p: any) => ({ ...p, project_id: pid, stage_id: null }))} placeholder="zapytanie lub przetarg…" />
+            <label className="lbl">Etap sprawy</label>
+            <Select value={v.stage_id} onChange={set('stage_id')} options={stageOpts} empty={v.project_id ? '—' : 'najpierw wybierz sprawę'} />
             <label className="lbl">K. powiązany</label>
             <div className="span3"><ContractorPicker value={v.related_contractor_id} onChange={set('related_contractor_id')} exclude={v.contractor_id ?? undefined} /></div>
             <label className="lbl" htmlFor="k-dur">Czas trwania</label>

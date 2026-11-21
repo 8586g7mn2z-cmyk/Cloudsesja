@@ -403,7 +403,7 @@ export async function contractorRoutes(app: FastifyInstance, ctx: Ctx) {
          LEFT JOIN operators o ON o.id = a.created_by WHERE p.contractor_id = ?`,
         id,
       )
-      .map((a) => ({ ...a, ext: extOf(a.name), source: 'projekt', source_label: `Projekt: ${a.project}` }));
+      .map((a) => ({ ...a, ext: extOf(a.name), source: 'projekt', source_label: `Sprawa: ${a.project}` }));
     const docs = db.all<any>(
       `SELECT d.id, d.number, d.name, d.folder_id, d.author_id, d.current_version, d.published_at, f.original_name, f.size, f.mime, o.name AS author
        FROM documents d JOIN document_versions v ON v.document_id = d.id AND v.version = d.current_version JOIN files f ON f.id = v.file_id

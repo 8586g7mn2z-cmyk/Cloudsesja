@@ -60,7 +60,7 @@ interface Ctx {
   dictLabels: Record<string, string>;
   operators: Operator[];
   contractors: ContractorLite[];
-  status: { smtp_configured: boolean; sms_configured: boolean; sms_provider: string };
+  status: { smtp_configured: boolean; sms_configured: boolean; sms_provider: string; modules?: Record<string, boolean> };
   reloadDicts: () => Promise<void>;
   reloadOperators: () => Promise<void>;
   reloadContractors: () => Promise<void>;

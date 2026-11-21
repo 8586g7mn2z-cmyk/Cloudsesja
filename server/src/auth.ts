@@ -7,7 +7,7 @@ import { forbidden, HttpError, nowIso, toLocalIso, nowDate } from './util.js';
 
 export type Role = 'admin' | 'kierownik' | 'handlowiec';
 export const ROLES: Role[] = ['admin', 'kierownik', 'handlowiec'];
-export const ROLE_LABELS: Record<Role, string> = { admin: 'Administrator', kierownik: 'Kierownik', handlowiec: 'Handlowiec' };
+export const ROLE_LABELS: Record<Role, string> = { admin: 'Administrator', kierownik: 'Kierownik', handlowiec: 'Pracownik' };
 
 export interface User {
   id: number;

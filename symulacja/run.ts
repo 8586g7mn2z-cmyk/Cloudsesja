@@ -62,7 +62,7 @@ const M = {
   rems: [] as MRem[],
   sales: [] as MSale[],
   orders: 0,
-  projects: [] as { id: number; contractorId: number | null; stageIds: number[] }[],
+  projects: [] as { id: number; contractorId: number | null; stageIds: number[]; closed?: boolean }[],
   products: [] as { id: number; name: string; price: number; vat: number }[],
   time: [] as MTime[],
   msgs: [] as MMsg[],
@@ -970,6 +970,8 @@ function planScenario() {
     const badNip = await team[0].raw('POST', '/api/contractors', { name: 'Zły NIP', nip: '1234567890' });
     C.check('Kontrahenci', 'NIP z błędną sumą kontrolną jest odrzucany', badNip.status === 400, `→ ${badNip.status}`);
   });
+  // Dzień 8: przetarg od wpływu do rozstrzygnięcia — termin ofert, dokumentacja, historia.
+  at(7, '09:45', 'przetarg: termin składania ofert, dokumentacja i historia sprawy', tenderScenario);
   // Równoległe zapisy: numeracja bez duplikatów.
   at(4, '11:30', 'dwudziestu równoczesnych wpisów korespondencji', async () => {
     const c = anyContractor()!;
@@ -1084,6 +1086,74 @@ async function importScenario() {
   const sr2 = await doImport(admin, 'sales', 'sprzedaz.xlsx', await xlsxBuffer(sh, srows));
   C.eq('Import', 'ponowny import sprzedaży nie dubluje dokumentów', ((await admin.get('/api/sales')) ?? []).length, M.sales.length, `dodano ${sr2?.added}`);
   note('Import: 30 kontrahentów, 20 osób, 3 towary, 12 dokumentów sprzedaży; ponowny import bez duplikatów.');
+}
+
+async function tenderScenario() {
+  const op = team[1];
+  const c = anyContractor(op)!;
+  let due = addDays(today(), 6);
+  while (weekday(due) > 5) due = addDays(due, 1);
+  const deadline = `${due}T12:00:00`;
+  const r = await op.post('/api/projects', { kind: 'przetarg', name: 'Dostawa analizatorów dla szpitala powiatowego', ref_no: 'ZP/17/2026', source: 'platforma e-Zamówienia', contractor_id: c.id, received_date: today(), submit_deadline: deadline.slice(0, 16), budget: 250000 });
+  if (!r) return;
+  const entry = { id: r.id, contractorId: c.id, stageIds: [] as number[], closed: false };
+  M.projects.push(entry);
+  const card = await op.get(`/api/projects/${r.id}`);
+  C.check('Zapytania i przetargi', 'sprawa zapisuje rodzaj, znak, źródło, datę wpływu i termin składania ofert', card?.kind === 'przetarg' && card?.ref_no === 'ZP/17/2026' && card?.source === 'platforma e-Zamówienia' && card?.received_date === today() && card?.submit_deadline === deadline && /^DIAGNOS\/PRJ\/\d+\/\d{4}$/.test(card?.number ?? ''), () => JSON.stringify(card));
+  // termin ofert → zadanie dla opiekuna z przypomnieniem dobę przed terminem
+  const findTask = async () => ((await admin.get(`/api/tasks?project_id=${r.id}&archived=1`)) ?? []).filter((t: any) => t.title.startsWith('Termin składania ofert'));
+  let ts = await findTask();
+  const okTask = ts.length === 1 && ts[0].start_at === addMin(deadline, -60) && ts[0].end_at === deadline && JSON.stringify(ts[0].operator_ids) === JSON.stringify([op.id]) && ts[0].remind_before_min === 23 * 60;
+  C.check('Zapytania i przetargi', 'termin składania ofert tworzy zadanie dla opiekuna z przypomnieniem dobę wcześniej', okTask, () => JSON.stringify(ts.map((t: any) => [t.title, t.start_at, t.end_at, t.operator_ids, t.remind_before_min])));
+  if (!ts.length) return;
+  const mt: MTask = { id: ts[0].id, title: ts[0].title, start: ts[0].start_at, end: ts[0].end_at, ops: [op.id], principal: op.id, createdBy: op.id, status: 'new', progress: 0, contractorId: c.id, projectId: r.id, deleted: false, remind: { before: 23 * 60, inapp: true, email: true, sms: false } };
+  M.tasks.set(mt.id, mt);
+  addReminders(mt);
+  // zamawiający przesuwa termin → zadanie przesuwa się razem z nim (bez duplikatu)
+  let due2 = addDays(due, 2);
+  while (weekday(due2) > 5) due2 = addDays(due2, 1);
+  const deadline2 = `${due2}T10:00:00`;
+  await op.put(`/api/projects/${r.id}`, { ...card, submit_deadline: deadline2.slice(0, 16), status_id: dict('project_status', 'W przygotowaniu') });
+  ts = await findTask();
+  C.check('Zapytania i przetargi', 'zmiana terminu ofert przesuwa zadanie zamiast tworzyć drugie', ts.length === 1 && ts[0].id === mt.id && ts[0].end_at === deadline2 && ts[0].start_at === addMin(deadline2, -60), () => JSON.stringify(ts.map((t: any) => [t.id, t.start_at, t.end_at])));
+  mt.start = addMin(deadline2, -60);
+  mt.end = deadline2;
+  dropReminders(mt.id);
+  addReminders(mt);
+  // dokumentacja sprawy: dokument z wersjami w rejestrze, widoczny w kartotece sprawy
+  const swz = fakeFile('swz-przetarg');
+  const up = await op.upload('/api/documents', { name: 'SWZ — dostawa analizatorów', folder_id: String(folders['Przetargi']), project_id: String(r.id), contractor_id: String(c.id) }, { name: 'SWZ.pdf', content: swz, type: 'application/pdf' });
+  M.docs.push({ id: up.json.id, name: 'SWZ — dostawa analizatorów', folderId: folders['Przetargi'], authorId: op.id, contractorId: c.id, validTo: null, versions: [sha(swz)], restricted: true });
+  const swz2 = fakeFile('swz-przetarg-zmiana');
+  await op.upload(`/api/documents/${up.json.id}/versions`, { comment: 'modyfikacja SWZ z dnia ' + today() }, { name: 'SWZ-zmiana.pdf', content: swz2, type: 'application/pdf' });
+  const docs = (await op.get(`/api/documents?project_id=${r.id}`)) ?? [];
+  const first = await op.raw('GET', `/api/documents/${up.json.id}/file?version=0`);
+  C.check('Zapytania i przetargi', 'dokumentacja sprawy: dokument z kolejną wersją jest przy sprawie, a pierwotna wersja pozostaje dostępna', docs.length === 1 && docs[0].current_version === 1 && sha(first.raw) === sha(swz), () => JSON.stringify(docs.map((d: any) => [d.name, d.current_version])));
+  // korespondencja w sprawie
+  const k = await op.post('/api/correspondence', { kind_id: kindId('phone'), direction: 'out', event_at: simNow.slice(0, 16), duration_sec: 240, topic_text: 'Pytanie do zamawiającego o termin dostawy', contractor_id: c.id, project_id: r.id, body: 'Zamawiający potwierdził termin 30 dni.' });
+  M.corr.set(k.id, { id: k.id, op: op.id, kind: kindName('phone'), dir: 'out', eventAt: simNow, dur: 240, contractorId: c.id, projectId: r.id, deleted: false });
+  // historia sprawy: komplet zdarzeń w kolejności od najnowszych
+  const h = (await op.get(`/api/history?project_id=${r.id}`)) ?? [];
+  const titles = h.map((e: any) => e.title).join(' | ');
+  const need = ['Założono sprawę', 'status: — → W przygotowaniu', 'termin składania ofert', 'Dodano dokument: SWZ — dostawa analizatorów', 'Nowa wersja (1) dokumentu: SWZ — dostawa analizatorów', 'Telefon wychodząca: Pytanie do zamawiającego o termin dostawy', 'Zaplanowano zadanie: Termin składania ofert'];
+  C.check('Zapytania i przetargi', 'historia sprawy zawiera założenie, zmiany statusu i terminu, dokumenty z wersjami, korespondencję i zadania', need.every((n) => titles.includes(n)), () => `brakuje: ${need.filter((n) => !titles.includes(n)).join('; ')} | jest: ${titles.slice(0, 500)}`);
+  C.check('Zapytania i przetargi', 'historia jest uporządkowana od najnowszych zdarzeń', h.every((e: any, i: number) => i === 0 || h[i - 1].at >= e.at), '');
+  const hc = (await op.get(`/api/history?contractor_id=${c.id}`)) ?? [];
+  C.check('Zapytania i przetargi', 'historia kontrahenta pokazuje jego sprawy i korespondencję', hc.some((e: any) => e.title.includes('Przetarg') && e.title.includes('Dostawa analizatorów')) && hc.some((e: any) => e.title.includes('Pytanie do zamawiającego')), '');
+  // dokument z segregatora bez uprawnień nie trafia do cudzej historii
+  const leak = (await serwis.get(`/api/history?project_id=${r.id}`)) ?? [];
+  C.check('Zapytania i przetargi', 'historia pokazuje dokumenty tylko osobom z dostępem do nich', leak.some((e: any) => e.type === 'dokument') === ((await serwis.raw('GET', `/api/documents/${up.json.id}`)).status === 200), '');
+  // rozstrzygnięcie: wynik zapisany, zadanie na termin (nietknięte) znika
+  await op.put(`/api/projects/${r.id}`, { ...card, submit_deadline: deadline2.slice(0, 16), status_id: dict('project_status', 'Rozstrzygnięte'), result: 'wygrane', result_date: today() });
+  ts = await findTask();
+  const after = await op.get(`/api/projects/${r.id}`);
+  C.check('Zapytania i przetargi', 'po rozstrzygnięciu sprawa ma wynik, a niewykonane zadanie na termin ofert znika', after?.result === 'wygrane' && ts.length === 0, () => `wynik ${after?.result}, zadań ${ts.length}`);
+  mt.deleted = true;
+  dropReminders(mt.id);
+  entry.closed = true;
+  const bad = await op.raw('POST', '/api/projects', { kind: 'aukcja', name: 'x' });
+  C.check('Zapytania i przetargi', 'niepoprawny rodzaj sprawy jest odrzucany', bad.status === 400, `→ ${bad.status}`);
+  note('Przetarg przeprowadzony od wpływu do rozstrzygnięcia: termin ofert, dokumentacja z wersjami, historia.');
 }
 
 let contractDoc: MDoc | null = null;
@@ -1343,7 +1413,7 @@ async function main() {
       expected: {
         contractorsActive: [...M.contractors.values()].filter((c) => c.active).length,
         correspondence: [...M.corr.values()].filter((k) => !k.deleted).length,
-        sales: M.sales.length, orders: M.orders, projects: M.projects.length, products: M.products.length + 2,
+        sales: M.sales.length, orders: M.orders, projects: M.projects.filter((x) => !x.closed).length, products: M.products.length + 2,
         sampleContractor: { id: sample.id, name: sample.name, correspondence: [...M.corr.values()].filter((k) => k.contractorId === sample.id && !k.deleted).length, contacts: sample.contacts.length },
         sampleProjectId: M.projects[0]?.id ?? null,
       },

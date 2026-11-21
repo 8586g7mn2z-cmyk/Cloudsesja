@@ -128,10 +128,10 @@ test('okna dialogowe, podwójny zapis i samouczek', async ({ page }) => {
   const tour = page.getByRole('dialog', { name: 'Samouczek' });
   await expect(page.locator('.tour-invite')).toBeVisible();
   await page.getByRole('button', { name: 'Uruchom samouczek' }).click();
-  await expect(tour.getByText('Krok 1 z 17')).toBeVisible();
-  for (let i = 0; i < 5; i++) await tour.getByRole('button', { name: 'Dalej' }).click();
+  await expect(tour.getByText(/Krok 1 z \d+/)).toBeVisible();
+  for (let i = 0; i < 7; i++) await tour.getByRole('button', { name: 'Dalej' }).click();
   await expect(tour.getByRole('heading', { name: 'Panel grupowania' })).toBeVisible();
-  await expect(page).toHaveURL(/\/kontrahenci$/);
+  await expect(page).toHaveURL(/\/projekty$/);
   await expect(page.locator('.tour-hole')).toBeVisible();
   await page.keyboard.press('Escape');
   await expect(tour).toHaveCount(0);
@@ -141,19 +141,36 @@ test('okna dialogowe, podwójny zapis i samouczek', async ({ page }) => {
   page.on('request', (r) => {
     if (r.method() === 'POST' && r.url().endsWith('/api/projects')) posts++;
   });
-  await page.getByRole('link', { name: 'Projekty' }).click();
-  await page.getByRole('button', { name: 'Nowy projekt' }).click();
+  await page.getByRole('link', { name: 'Zapytania i przetargi' }).click();
+  await page.getByRole('button', { name: 'Nowy przetarg' }).click();
   const modal = page.locator('.modal');
-  await modal.locator('.modal-body input').first().fill('Projekt po dwukliku');
+  await modal.locator('#case-name').fill('Projekt po dwukliku');
   // kliknięcie w tło nie zamyka formularza i nie gubi danych
   await page.mouse.click(5, 400);
-  await expect(modal.locator('.modal-body input').first()).toHaveValue('Projekt po dwukliku');
+  await expect(modal.locator('#case-name')).toHaveValue('Projekt po dwukliku');
   await modal.getByRole('button', { name: 'Zapisz' }).dblclick();
   await page.waitForLoadState('networkidle');
   expect(posts).toBe(1);
 
+  // kartoteka sprawy: dokumentacja i historia
+  await expect(page.getByRole('heading', { name: 'Przetarg: Projekt po dwukliku' })).toBeVisible();
+  await page.getByRole('button', { name: 'Dokument', exact: true }).click();
+  await page.getByLabel('Plik dokumentu').setInputFiles({ name: 'swz.txt', mimeType: 'text/plain', buffer: Buffer.from('Specyfikacja warunków zamówienia') });
+  await page.locator('.modal').getByRole('button', { name: 'Zapisz' }).click();
+  await expect(page.getByRole('cell', { name: 'swz', exact: true })).toBeVisible();
+  await page.getByRole('tab', { name: 'Historia' }).click();
+  await expect(page.locator('.timeline')).toContainText('Założono sprawę');
+  await expect(page.locator('.timeline')).toContainText('Dodano dokument: swz');
+
   // usunięcie z okna formularza: pytanie o potwierdzenie jest nad formularzem i daje się kliknąć
-  await page.getByRole('link', { name: 'Rejestr zadań' }).click();
+  await page.goto('/zadania');
+  // przypomnienie o zadaniu z pierwszego testu może w tej chwili wyskoczyć — operator je potwierdza
+  await page.waitForLoadState('networkidle');
+  const reminder = page.locator('.reminder-modal button:has-text("Potwierdzam")');
+  for (let i = 0; i < 5 && (await reminder.count()); i++) {
+    await reminder.first().click({ timeout: 2000 }).catch(() => undefined);
+    await page.waitForTimeout(300);
+  }
   await page.locator('.dt-row').filter({ hasText: 'Przygotować ofertę na DIAG-200' }).dblclick();
   await page.locator('.modal').getByRole('button', { name: 'Usuń' }).click();
   const confirm = page.getByRole('alertdialog', { name: 'Potwierdzenie' });

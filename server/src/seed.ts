@@ -263,20 +263,78 @@ async function main() {
   const pStatus = dict('project_status');
   const projects: any[] = [];
   db.tx(() => {
-    const names = ['Wdrożenie systemu pomiarowego', 'Modernizacja linii kontroli jakości', 'Serwis roczny urządzeń', 'Szkolenia operatorów', 'Rozbudowa stanowisk diagnostycznych', 'Audyt aparatury', 'Pilotaż DIAG-200 Pro', 'Integracja z systemem MES'];
-    names.forEach((n, i) => {
+    // zapytania ofertowe i przetargi: część w toku z bliskim terminem, część rozstrzygnięta
+    const cases: [string, string, number, number | null, string | null, string][] = [
+      // rodzaj, przedmiot, dni od wpływu, dni do terminu ofert (null = brak), wynik, status
+      ['przetarg', 'Dostawa analizatorów diagnostycznych DIAG-200 Pro', 12, 3, null, 'W przygotowaniu'],
+      ['przetarg', 'Serwis pogwarancyjny aparatury laboratoryjnej na lata 2027–2028', 20, 9, null, 'W przygotowaniu'],
+      ['zapytanie', 'Wycena przeglądu rocznego urządzeń pomiarowych', 4, 6, null, 'Nowe'],
+      ['zapytanie', 'Oferta na szkolenie operatorów stanowisk diagnostycznych', 2, 12, null, 'Nowe'],
+      ['przetarg', 'Modernizacja linii kontroli jakości', 35, -2, null, 'Oferta złożona'],
+      ['zapytanie', 'Zapytanie o dostępność kabli pomiarowych i terminy dostaw', 9, null, null, 'W przygotowaniu'],
+      ['przetarg', 'Wyposażenie pracowni diagnostycznej', 80, -45, 'wygrane', 'Rozstrzygnięte'],
+      ['przetarg', 'Dostawa odczynników kontrolnych', 110, -70, 'przegrane', 'Rozstrzygnięte'],
+      ['zapytanie', 'Wycena audytu aparatury', 60, -40, 'wygrane', 'Zakończone'],
+      ['przetarg', 'Integracja urządzeń z systemem MES', 150, -100, 'unieważnione', 'Rozstrzygnięte'],
+    ];
+    const st = (n: string) => pStatus.find((x: any) => x.name === n)?.id ?? null;
+    cases.forEach(([kind, n, ago, due, result, status], i) => {
       const c = contractors[i * 3];
-      const start = addDaysDate(today, -int(30, 200));
-      const id = db.insert('projects', { number: makeNumber(db, 'PRJ', start), name: `${n} — ${c.short}`, contractor_id: c.id, manager_id: c.owner, start_date: start, end_date: addDaysDate(start, int(60, 240)), status_id: pick(pStatus.slice(0, 3)).id, budget: int(10, 200) * 1000, description: `Projekt realizowany dla ${c.full}.`, created_at: `${start}T09:00:00`, created_by: c.owner });
-      ['Analiza potrzeb', 'Oferta i umowa', 'Realizacja', 'Odbiór'].forEach((st, j) =>
-        db.insert('project_stages', { project_id: id, name: st, start_date: addDaysDate(start, j * 30), end_date: addDaysDate(start, j * 30 + 29), status: j < 1 ? 'zakończony' : j === 1 ? 'w toku' : 'planowany', sort: j }),
-      );
-      projects.push({ id, c });
+      const start = addDaysDate(today, -ago);
+      const deadline = due == null ? null : `${addDaysDate(today, due)}T${pick(['10:00', '12:00', '14:00'])}:00`;
+      const id = db.insert('projects', {
+        number: makeNumber(db, 'PRJ', start),
+        kind,
+        name: n,
+        ref_no: kind === 'przetarg' ? `ZP/${int(3, 48)}/${today.slice(0, 4)}` : null,
+        source: kind === 'przetarg' ? pick(['platforma e-Zamówienia', 'Baza Konkurencyjności', 'platforma zakupowa zamawiającego']) : pick(['e-mail', 'telefon', 'formularz na stronie']),
+        received_date: start,
+        submit_deadline: deadline,
+        result,
+        result_date: result ? addDaysDate(today, (due ?? 0) + 14) : null,
+        contractor_id: c.id,
+        manager_id: c.owner,
+        status_id: st(status),
+        budget: int(10, 400) * 1000,
+        description: kind === 'przetarg' ? `Zamawiający: ${c.full.replace(/\.$/, '')}. Wymagane referencje i wadium; kryteria oceny: cena 60%, okres gwarancji 40%.` : `Zapytanie od: ${c.full.replace(/\.$/, '')}. Klient prosi o wycenę i termin realizacji.`,
+        created_at: `${start}T09:00:00`,
+        created_by: c.owner,
+      });
+      if (kind === 'przetarg')
+        ['Analiza dokumentacji', 'Pytania do zamawiającego', 'Przygotowanie oferty', 'Złożenie oferty'].forEach((stg, j) =>
+          db.insert('project_stages', { project_id: id, name: stg, start_date: addDaysDate(start, j * 5), end_date: addDaysDate(start, j * 5 + 4), status: result || j < 2 ? 'zakończony' : j === 2 ? 'w toku' : 'planowany', sort: j }),
+        );
+      else db.insert('project_stages', { project_id: id, name: 'Przygotowanie odpowiedzi', start_date: start, end_date: addDaysDate(start, 5), status: result ? 'zakończony' : 'w toku', sort: 0 });
+      db.insert('audit_log', { at: `${start}T09:00:00`, operator_id: c.owner, entity: 'project', entity_id: id, action: 'dodanie', details: null });
+      if (status !== 'Nowe') db.insert('audit_log', { at: `${addDaysDate(start, 2)}T11:20:00`, operator_id: c.owner, entity: 'project', entity_id: id, action: 'zmiana', details: JSON.stringify(`status: Nowe → ${status === 'Rozstrzygnięte' || status === 'Zakończone' || status === 'Oferta złożona' ? 'W przygotowaniu' : status}`) });
+      if (result) db.insert('audit_log', { at: `${addDaysDate(today, (due ?? 0) + 14)}T15:00:00`, operator_id: c.owner, entity: 'project', entity_id: id, action: 'zmiana', details: JSON.stringify(`status: Oferta złożona → ${status}; wynik: — → ${result}`) });
+      projects.push({ id, c, kind, name: n, start, deadline, result });
     });
-    // część korespondencji powiąż z projektami
+    // przebieg każdej sprawy w korespondencji: wpływ, pytania, odpowiedź, złożenie oferty, wynik
+    const kindBy = (code: string) => kinds.find((k: any) => k.code === code)!;
     for (const p of projects) {
-      const st = db.get<any>('SELECT id FROM project_stages WHERE project_id = ? ORDER BY sort LIMIT 1', p.id);
-      db.run('UPDATE correspondence SET project_id = ?, stage_id = ? WHERE id IN (SELECT id FROM correspondence WHERE contractor_id = ? LIMIT 2)', p.id, st.id, p.c.id);
+      const tender = p.kind === 'przetarg';
+      const who = p.c.full.replace(/\.$/, '');
+      const steps: [number, string, string, 'in' | 'out', string, string][] = [
+        [0, '09:30', tender ? 'note' : 'email', tender ? 'out' : 'in', tender ? 'Pobrano dokumentację przetargową' : 'Wpłynęło zapytanie ofertowe', tender ? `Ogłoszenie o zamówieniu opublikowane przez: ${who}. Dokumentacja zapisana w kartotece sprawy.` : `Zapytanie od: ${who}. Treść w załączonym dokumencie.`],
+        [2, '11:15', 'phone', 'out', tender ? 'Pytanie do zamawiającego o zakres dostawy' : 'Doprecyzowanie zakresu zapytania', 'Ustalono zakres, ilości i oczekiwany termin realizacji.'],
+        [4, '13:40', 'email', 'in', tender ? 'Odpowiedzi zamawiającego na pytania wykonawców' : 'Odpowiedź klienta z dodatkowymi wymaganiami', 'Otrzymano odpowiedzi; wymagania uwzględniono w przygotowywanej ofercie.'],
+      ];
+      const offerDay = p.deadline ? addDaysDate(p.deadline.slice(0, 10), -1) : null;
+      for (const [off, time, code, dir, subject, body] of steps) {
+        const day = addDaysDate(p.start, off);
+        if (day > today) continue;
+        const dt = `${day}T${time}:00`;
+        db.insert('correspondence', { number: makeNumber(db, 'K', dt), kind_id: kindBy(code).id, direction: dir, event_at: dt, duration_sec: code === 'phone' ? int(180, 900) : 0, topic_text: subject, contractor_id: p.c.id, contact_id: pick(p.c.contacts), operator_id: p.c.owner, project_id: p.id, body, created_at: dt, created_by: p.c.owner });
+      }
+      if (offerDay && offerDay <= today && (p.result || p.deadline < now)) {
+        const dt = `${offerDay}T15:10:00`;
+        db.insert('correspondence', { number: makeNumber(db, 'K', dt), kind_id: kindBy('email').id, direction: 'out', event_at: dt, duration_sec: 0, topic_text: 'Złożenie oferty', contractor_id: p.c.id, contact_id: pick(p.c.contacts), operator_id: p.c.owner, project_id: p.id, body: 'Oferta złożona w terminie; potwierdzenie złożenia zapisane w dokumentacji sprawy.', created_at: dt, created_by: p.c.owner });
+      }
+      if (p.result) {
+        const dt = `${addDaysDate(p.deadline!.slice(0, 10), 14)}T10:05:00`;
+        db.insert('correspondence', { number: makeNumber(db, 'K', dt), kind_id: kindBy('email').id, direction: 'in', event_at: dt, duration_sec: 0, topic_text: `Informacja o wyniku: ${p.result}`, contractor_id: p.c.id, contact_id: pick(p.c.contacts), operator_id: p.c.owner, project_id: p.id, body: 'Zamawiający przekazał informację o rozstrzygnięciu.', created_at: dt, created_by: p.c.owner });
+      }
     }
   });
 
@@ -294,7 +352,8 @@ async function main() {
     const past = offset < 0;
     const progress = past ? pick([100, 100, 100, 50, 0, 80]) : offset === 0 ? pick([0, 25, 50]) : 0;
     const op = rnd() < 0.8 ? c.owner : pick(allOps);
-    const prj = rnd() < 0.15 ? pick(projects) : null;
+    rnd(); // (zachowuje kolejność liczb losowych) zadania ogólne nie są przypisywane do zapytań i przetargów
+    const prj = null as any;
     taskIds.push(
       createTask(
         ctx,
@@ -409,6 +468,42 @@ async function main() {
     const pdf = await tinyPdf(`Oferta dla ${c.short}`, [`Kontrahent: ${c.full}`, 'Zakres: dostawa i wdrożenie systemu pomiarowego.']);
     const fid = saveFile(ctx, pdf, `Oferta ${c.short}.pdf`, 'application/pdf', c.owner);
     createDocument(ctx, userObj(c.owner), { name: `Oferta handlowa — ${c.short}`, description: 'Oferta wysłana do klienta', folder_id: folder('Oferty'), type_id: docType('Oferta'), contractor_id: c.id, project_id: null, valid_from: today, valid_to: addDaysDate(today, 30) }, fid, null);
+  }
+  // dokumentacja spraw: treść zapytania / dokumentacja przetargowa, oferta (z drugą wersją)
+  for (const p of projects) {
+    const tender = p.kind === 'przetarg';
+    const fld = folder(tender ? 'Przetargi' : 'Zapytania ofertowe');
+    const u = userObj(p.c.owner);
+    const add = async (name: string, type: string, lines: string[], day: string, time: string) => {
+      const fid = saveFile(ctx, await tinyPdf(name, lines), `${name}.pdf`, 'application/pdf', p.c.owner);
+      const id = createDocument(ctx, u, { name, description: p.name, folder_id: fld, type_id: docType(type), contractor_id: p.c.id, project_id: p.id, valid_from: null, valid_to: null }, fid, 'wersja początkowa');
+      // dokument nosi datę zdarzenia w sprawie, nie datę załadowania danych przykładowych
+      const at = `${day > today ? today : day}T${time}:00`;
+      db.run('UPDATE documents SET published_at = ?, created_at = ? WHERE id = ?', at, at, id);
+      db.run('UPDATE document_versions SET created_at = ? WHERE document_id = ?', at, id);
+      db.run('UPDATE document_log SET at = ? WHERE document_id = ?', at, id);
+      return id;
+    };
+    if (tender) {
+      await add(`SWZ — ${p.name}`, 'Dokumentacja przetargowa', [`Zamawiający: ${p.c.full}`, 'Specyfikacja warunków zamówienia.'], p.start, '09:35');
+      await add(`Opis przedmiotu zamówienia — ${p.name}`, 'Dokumentacja przetargowa', ['Załącznik nr 1 do SWZ.'], p.start, '09:36');
+      if (addDaysDate(p.start, 4) <= today) await add(`Odpowiedzi na pytania wykonawców — ${p.name}`, 'Dokumentacja przetargowa', ['Wyjaśnienia treści SWZ.'], addDaysDate(p.start, 4), '13:45');
+    } else await add(`Treść zapytania — ${p.name}`, 'Zapytanie ofertowe', [`Zapytanie od: ${p.c.full}`], p.start, '09:32');
+    if (p.result || (p.deadline && p.deadline < now)) {
+      const offerDay = addDaysDate(p.deadline!.slice(0, 10), -1);
+      const offer = await add(`Oferta — ${p.name}`, tender ? 'Oferta przetargowa' : 'Oferta', ['Oferta złożona w terminie.'], addDaysDate(offerDay, -2), '14:20');
+      const v2 = saveFile(ctx, await tinyPdf(`Oferta — ${p.name} (korekta)`, ['Korekta formularza cenowego.']), `Oferta — ${p.name} v2.pdf`, 'application/pdf', p.c.owner);
+      const vAt = `${offerDay}T12:30:00`;
+      db.insert('document_versions', { document_id: offer, version: 1, file_id: v2, author_id: p.c.owner, comment: 'korekta formularza cenowego', created_at: vAt });
+      db.update('documents', offer, { current_version: 1 });
+      db.insert('document_log', { document_id: offer, version: 1, operator_id: p.c.owner, action: 'nowa wersja', details: 'korekta formularza cenowego', at: vAt });
+    }
+    // zadanie na termin składania ofert (tak jak tworzy je aplikacja)
+    if (p.deadline && !p.result && p.deadline > now) {
+      const tid = createTask(ctx, { title: `Termin składania ofert: ${p.name}`, description: null, start_at: addMinutesIso(p.deadline, -60), end_at: p.deadline, operator_ids: [p.c.owner], principal_id: p.c.owner, priority: 4, contractor_id: p.c.id, project_id: p.id, remind_before_min: 23 * 60, remind_inapp: true, remind_email: true }, p.c.owner);
+      db.update('projects', p.id, { deadline_task_id: tid });
+      db.run('UPDATE tasks SET created_at = ? WHERE id = ?', `${p.start}T09:00:00`, tid);
+    }
   }
   // nowa wersja cennika
   const cennik = db.get<any>("SELECT * FROM documents WHERE name = 'Cennik produktów 2026'")!;

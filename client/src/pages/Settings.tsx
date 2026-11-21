@@ -6,7 +6,7 @@ import { useApi } from '../lib/hooks';
 import { useApp } from '../lib/store';
 import { Check, Input, Loading, Modal, Notice, OperatorSelect, Select, Tabs, Textarea } from '../components/ui';
 
-const ROLE_LABELS: Record<string, string> = { admin: 'Administrator', kierownik: 'Kierownik', handlowiec: 'Handlowiec' };
+const ROLE_LABELS: Record<string, string> = { admin: 'Administrator', kierownik: 'Kierownik', handlowiec: 'Pracownik' };
 
 function Operators() {
   const { operators, reloadOperators, toast } = useApp();
@@ -224,7 +224,7 @@ function Rules() {
     }
   };
   if (!d.data) return <Loading />;
-  const assign: Record<string, string> = { owner: 'prowadzący kontrahenta / opiekun projektu', creator: 'operator, który wywołał zdarzenie', operator: 'wskazany operator' };
+  const assign: Record<string, string> = { owner: 'prowadzący kontrahenta / opiekun sprawy', creator: 'operator, który wywołał zdarzenie', operator: 'wskazany operator' };
   return (
     <div style={{ maxWidth: 1100 }}>
       <p className="small muted">Reguła: zdarzenie → szablon zadania → opóźnienie. Przy zdarzeniu system tworzy zadanie z terminem przesuniętym o podaną liczbę dni. W tytule i opisie można użyć: {'{{kontrahent}}'}, {'{{kontrahent_pelna}}'}, {'{{projekt}}'}, {'{{numer}}'}, {'{{data}}'}.</p>
@@ -391,6 +391,38 @@ function Company() {
   );
 }
 
+/** Włączanie i wyłączanie części systemu. Wyłączony moduł znika z menu, kartotek i samouczka; jego dane zostają. */
+function Modules() {
+  const { toast, reloadStatus } = useApp();
+  const d = useApi<any>('/api/settings/modules');
+  if (!d.data) return <Loading />;
+  const toggle = async (k: string, v: boolean) => {
+    try {
+      await put('/api/settings/modules', { [k]: v });
+      await Promise.all([d.reload(), reloadStatus()]);
+      toast(v ? 'Moduł włączony.' : 'Moduł wyłączony.');
+    } catch (e: any) {
+      toast(e.message, 'error');
+    }
+  };
+  return (
+    <div style={{ maxWidth: 720 }}>
+      <Notice kind="info">Panel jest ustawiony na pracę z zapytaniami, przetargami, dokumentacją i historią kontaktów. Poniższe moduły są dodatkowe: po włączeniu pojawiają się w menu i kartotekach. Wyłączenie niczego nie kasuje.</Notice>
+      <table className="grid mt8">
+        <thead><tr><th>Moduł</th><th style={{ width: 120 }}>Stan</th></tr></thead>
+        <tbody>
+          {Object.keys(d.data.labels).map((k) => (
+            <tr key={k}>
+              <td>{d.data.labels[k]}</td>
+              <td><Check checked={!!d.data.modules[k]} onChange={(v) => toggle(k, v)}>{d.data.modules[k] ? 'włączony' : 'wyłączony'}</Check></td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 export function SettingsPage() {
   const { isAdmin } = useApp();
   const [tab, setTab] = useState('operators');
@@ -410,6 +442,7 @@ export function SettingsPage() {
     { key: 'smtp', label: 'Poczta SMTP' },
     { key: 'sms', label: 'Bramka SMS' },
     { key: 'company', label: 'Dane firmy' },
+    { key: 'modules', label: 'Moduły' },
   ];
   return (
     <div className="page">
@@ -424,6 +457,7 @@ export function SettingsPage() {
         {tab === 'smtp' && <Smtp />}
         {tab === 'sms' && <Sms />}
         {tab === 'company' && <Company />}
+        {tab === 'modules' && <Modules />}
       </div>
     </div>
   );

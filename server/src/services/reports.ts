@@ -329,7 +329,7 @@ function timeReport(ctx: Ctx, u: User, p: ReportParams): ReportResult {
   const total = [...map.values()].reduce((s, v) => s + v.corr + v.tasks, 0);
   const rows = [...map.entries()]
     .map(([key, v]) => ({
-      name: key === 'null' ? (by === 'operator' ? '(brak)' : by === 'contractor' ? '(bez kontrahenta)' : '(bez projektu)') : names.get(key) ?? `#${key}`,
+      name: key === 'null' ? (by === 'operator' ? '(brak)' : by === 'contractor' ? '(bez kontrahenta)' : '(bez sprawy)') : names.get(key) ?? `#${key}`,
       corr_h: round2(v.corr / 60),
       tasks_h: round2(v.tasks / 60),
       total_h: round2((v.corr + v.tasks) / 60),
@@ -337,7 +337,7 @@ function timeReport(ctx: Ctx, u: User, p: ReportParams): ReportResult {
     }))
     .filter((r) => r.total_h > 0)
     .sort((a, b) => b.total_h - a.total_h);
-  const label = { operator: 'Operator', contractor: 'Kontrahent', project: 'Projekt' }[by];
+  const label = { operator: 'Operator', contractor: 'Kontrahent', project: 'Sprawa' }[by];
   const top = rows.slice(0, 12);
   return {
     title: `Czas pracy wg: ${label.toLowerCase()}`,

@@ -26,7 +26,7 @@ export interface UiOptions {
 const SCREENS: [string, string, string?][] = [
   ['/', 'Moje zadania na dziś'], ['/kalendarz', 'Kalendarz zadań'], ['/zadania', 'Rejestr zadań'], ['/zadania-cykliczne', 'Zadania cykliczne'],
   ['/kontrahenci', 'Rejestr kontrahentów', 'contractorsActive'], ['/korespondencja', 'Korespondencja', 'correspondence'], ['/korespondencja-seryjna', 'Korespondencja seryjna'],
-  ['/wiadomosci', 'Korespondencja wewnętrzna'], ['/projekty', 'Projekty', 'projects'], ['/zamowienia', 'Zamówienia', 'orders'], ['/sprzedaz', 'Sprzedaż', 'sales'],
+  ['/wiadomosci', 'Korespondencja wewnętrzna'], ['/projekty', 'Zapytania i przetargi', 'projects'], ['/zamowienia', 'Zamówienia', 'orders'], ['/sprzedaz', 'Sprzedaż', 'sales'],
   ['/towary', 'Kartoteka towarowa', 'products'], ['/dokumenty', 'Rejestr dokumentów'], ['/szablony', 'Szablony dokumentów'], ['/raporty', 'Raporty'],
   ['/import', 'Import danych'], ['/kolejka', 'Kolejka wysyłki'], ['/ustawienia', 'Ustawienia'],
 ];

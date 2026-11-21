@@ -15,6 +15,7 @@ import { businessRoutes } from './routes/business.js';
 import { documentRoutes } from './routes/documents.js';
 import { reportRoutes } from './routes/reports.js';
 import { importRoutes } from './routes/imports.js';
+import { historyRoutes } from './routes/history.js';
 
 const OPEN_PATHS = new Set(['/api/auth/login', '/api/auth/logout', '/api/auth/me', '/api/health']);
 const PASSWORD_CHANGE_PATHS = new Set(['/api/auth/password', '/api/auth/me', '/api/auth/logout']);
@@ -71,6 +72,7 @@ export async function buildApp(ctx: Ctx, opts: { logger?: boolean } = {}): Promi
   await documentRoutes(app, ctx);
   await reportRoutes(app, ctx);
   await importRoutes(app, ctx);
+  await historyRoutes(app, ctx);
 
   const clientDir = ctx.config.clientDir;
   if (fs.existsSync(path.join(clientDir, 'index.html'))) {

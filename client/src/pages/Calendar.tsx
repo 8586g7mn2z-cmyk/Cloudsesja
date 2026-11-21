@@ -70,7 +70,7 @@ export function CalendarPage() {
         <span className="fl" style={{ width: 220 }}>Operator <OperatorSelect value={op} onChange={setOp} empty={isManager ? '(wszyscy widoczni)' : null} /></span>
         <span className="fl" style={{ width: 280 }}>Kontrahent <ContractorPicker value={contractor} onChange={setContractor} /></span>
         <span className="fl" style={{ width: 200 }}>Status <DictSelect dict="task_status" value={status} onChange={setStatus} empty="(wszystkie)" /></span>
-        <span className="fl">Temat / projekt / miasto <Input value={text} onChange={(e) => setText(e.target.value)} style={{ width: 160 }} /></span>
+        <span className="fl">Temat / sprawa / miasto <Input value={text} onChange={(e) => setText(e.target.value)} style={{ width: 160 }} /></span>
         <Check checked={showDone} onChange={setShowDone}>zrealizowane</Check>
         <Check checked={archived} onChange={setArchived}>archiwalne</Check>
         <Check checked={onlyGroup} onChange={setOnlyGroup}>tylko grupowe</Check>

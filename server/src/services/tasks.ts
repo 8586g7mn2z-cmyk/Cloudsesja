@@ -330,7 +330,7 @@ export function generateAllSeries(ctx: Ctx): number {
 export const RULE_EVENTS: Record<string, string> = {
   'contractor.created': 'Dodanie nowego kontrahenta',
   'order.created': 'Dodanie zamówienia',
-  'project.created': 'Założenie projektu',
+  'project.created': 'Założenie zapytania lub przetargu',
   'correspondence.incoming': 'Zarejestrowanie korespondencji przychodzącej',
 };
 
