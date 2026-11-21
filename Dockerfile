@@ -18,6 +18,7 @@ COPY package.json package-lock.json ./
 RUN npm ci --omit=dev --no-audit --no-fund && npm cache clean --force
 COPY --from=build /app/dist ./dist
 COPY server/assets ./server/assets
+COPY scripts/kopia.mjs ./scripts/kopia.mjs
 RUN mkdir -p /data && chown node:node /data
 USER node
 VOLUME ["/data"]

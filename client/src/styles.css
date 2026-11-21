@@ -194,7 +194,9 @@ input, select, textarea { font: inherit; color: var(--text); }
 
 /* ---------- Uniwersalny rejestr ---------- */
 .dt { display: flex; flex-direction: column; flex: 1; min-height: 0; min-width: 0; background: #fff; }
-.dt-toolbar { display: flex; align-items: center; gap: 6px; padding: 6px 12px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+.dt-toolbar { display: flex; align-items: center; gap: 6px; padding: 6px 12px; border-bottom: 1px solid var(--line); flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; scrollbar-width: thin; flex-shrink: 0; }
+.dt-toolbar > * { flex-shrink: 0; }
+.dt-toolbar .quick { flex-shrink: 1; min-width: 120px; }
 .dt-toolbar .quick { width: 200px; }
 .dt-filters { display: flex; gap: 8px 12px; padding: 6px 12px; border-bottom: 1px solid var(--line); background: var(--bg-subtle); flex-wrap: wrap; align-items: center; }
 .dt-filters .fl { display: flex; align-items: center; gap: 5px; font-size: var(--fs-s); color: var(--text-2); white-space: nowrap; }
@@ -279,6 +281,7 @@ table.grid input.input, table.grid select.select { height: 24px; }
 .cal-slot.off { background: #fafbfc; }
 .cal-slot.drop { background: var(--navy-tint); }
 .cal-ev { position: absolute; left: 2px; right: 2px; border: 1px solid #9fb2d6; border-left: 4px solid var(--navy-3); background: #edf2fb; border-radius: 2px; padding: 1px 4px; font-size: var(--fs-xs); overflow: hidden; cursor: grab; line-height: 1.3; z-index: 1; }
+.cal.dragging .cal-ev { pointer-events: none; opacity: 0.75; }
 .cal-ev:hover { z-index: 5; box-shadow: 0 2px 8px rgba(15, 23, 42, 0.2); }
 .cal-ev .t { font-weight: 600; }
 .cal-ev.done { border-left-color: var(--ok); background: #eef7f0; border-color: #b6d9c0; color: var(--text-2); }

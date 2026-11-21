@@ -45,6 +45,7 @@ export function CalendarGrid({
   const slotH = SLOT_PX[step] ?? 20;
   const ppm = slotH / step;
   const [drop, setDrop] = useState<string | null>(null);
+  const [dragging, setDragging] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const [now, setNow] = useState(new Date());
   useEffect(() => {
@@ -106,7 +107,7 @@ export function CalendarGrid({
   const td = today();
   const nowTop = (now.getHours() * 60 + now.getMinutes() - range.s * 60) * ppm;
   return (
-    <div className="cal">
+    <div className={`cal ${dragging ? 'dragging' : ''}`}>
       <div className="cal-days">
         {days.map((d) => {
           const wd = weekdayIdx(d);
@@ -145,6 +146,7 @@ export function CalendarGrid({
                     onDrop={(e) => {
                       e.preventDefault();
                       setDrop(null);
+                      setDragging(false);
                       const id = Number(e.dataTransfer.getData('text/task'));
                       const t = tasks.find((x) => x.id === id);
                       if (t && `${d}T${s}` !== t.start_at.slice(0, 16)) onMove(t, key);
@@ -161,7 +163,12 @@ export function CalendarGrid({
                     className={`cal-ev ${cls}`}
                     style={{ top, height: h, left: `calc(${(lane / lanes) * 100}% + 2px)`, width: `calc(${100 / lanes}% - 4px)`, right: 'auto' }}
                     draggable
-                    onDragStart={(e) => e.dataTransfer.setData('text/task', String(t.id))}
+                    onDragStart={(e) => {
+                      e.dataTransfer.setData('text/task', String(t.id));
+                      e.dataTransfer.effectAllowed = 'move';
+                      setTimeout(() => setDragging(true), 0);
+                    }}
+                    onDragEnd={() => setDragging(false)}
                     onClick={() => onOpen(t)}
                     title={`${fmtTime(t.start_at)}–${fmtTime(t.end_at)} ${t.title}${t.contractor_short || t.contractor_name ? ' · ' + (t.contractor_short || t.contractor_name) : ''}\nWykonawcy: ${t.operators_text ?? ''}\nPostęp: ${t.progress}%${t.description ? '\n' + t.description : ''}\nPrzeciągnij, aby zmienić termin.`}
                   >

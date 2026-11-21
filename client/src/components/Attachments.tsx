@@ -73,7 +73,7 @@ function ToDocumentDialog({ att, onClose, onDone }: { att: any; onClose: () => v
     setBusy(true);
     try {
       const r = await post(`/api/attachments/${att.id}/to-document`, { name, folder_id: folder, type_id: type });
-      toast(`Zapisano w rejestrze dokumentów (nr dokumentu #${r.id}).`);
+      toast(`Zapisano w rejestrze dokumentów jako ${r.number}.`);
       onDone();
     } catch (e: any) {
       toast(e.message, 'error');

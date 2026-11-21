@@ -48,6 +48,17 @@ describe('uprawnienia do dokumentów', () => {
       const att = await admin('POST', `/api/attachments/correspondence/${corr.json.id}/from-document`, { document_id: docId });
       expect((await k('GET', `/api/attachments/${att.json.id}/file`)).status).toBe(403);
       expect((await obcy('GET', `/api/attachments/${att.json.id}/file`)).status).toBe(200);
+      // zapis załącznika korespondencji do rejestru dokumentów
+      const c = await admin('POST', '/api/contractors', { name: 'Klient z załącznikiem' });
+      const corr2 = await admin('POST', '/api/correspondence', { kind_id: kind, direction: 'in', event_at: '2026-01-11T10:00', topic_text: 'umowa', contractor_id: c.json.id });
+      const up2 = await uploadAs(env, 'admin', `/api/attachments/correspondence/${corr2.json.id}`, {}, [{ name: 'umowa-podpisana.pdf', content: '%PDF-1.4 umowa', type: 'application/pdf' }]);
+      const aid = up2.json.ids[0];
+      const toDoc = await admin('POST', `/api/attachments/${aid}/to-document`, { name: 'Umowa podpisana' });
+      expect(toDoc.status).toBe(200);
+      const newDoc = (await admin('GET', `/api/documents/${toDoc.json.id}`)).json;
+      expect(newDoc).toMatchObject({ name: 'Umowa podpisana', contractor_id: c.json.id, source: 'korespondencja' });
+      expect((await admin('GET', `/api/documents/${toDoc.json.id}/file`)).raw.toString()).toBe('%PDF-1.4 umowa');
+      expect((await admin('POST', `/api/attachments/${aid}/to-document`, {})).status).toBe(400); // drugi raz nie
     } finally {
       await env.close();
     }

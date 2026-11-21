@@ -307,7 +307,7 @@ export async function documentRoutes(app: FastifyInstance, ctx: Ctx) {
       db.update('attachments', a.id, { source_document_id: id });
       return id;
     });
-    return { id };
+    return { id, number: db.get<any>('SELECT number FROM documents WHERE id = ?', id).number };
   });
 
   // ---------- Szablony ----------

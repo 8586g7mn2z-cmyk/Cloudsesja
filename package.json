@@ -17,7 +17,9 @@
     "smtp-test": "tsx scripts/smtp-test-server.ts",
     "test": "vitest run",
     "test:e2e": "playwright test --trace off",
-    "typecheck": "tsc -p server/tsconfig.json --noEmit && tsc -p client/tsconfig.json --noEmit"
+    "typecheck": "tsc -p server/tsconfig.json --noEmit && tsc -p client/tsconfig.json --noEmit",
+    "seed:prod": "node --disable-warning=ExperimentalWarning dist/server/seed.js",
+    "zrzuty": "node scripts/zrzuty.cjs"
   },
   "dependencies": {
     "@fastify/cookie": "^11.1.5",

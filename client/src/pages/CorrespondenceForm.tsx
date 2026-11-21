@@ -166,7 +166,7 @@ export function CorrespondenceForm({ id, defaults, onClose, onSaved }: { id?: nu
   const stageOpts = (stages.data ?? []).filter((s) => s.project_id === v.project_id).map((s) => ({ value: s.id, label: s.name }));
   const contractorName = v.contact_name || contact ? `${contact?.first_name ?? ''} ${contact?.last_name ?? ''}`.trim() || v.contact_name : '';
   const title = `Korespondencja${contractorName ? ` do ${contractorName}` : ''}${id ? ` · ${v.number}` : ''}`;
-  const canSend = (code === 'email' || code === 'sms') && !sent && !['queued', 'sending', 'awaiting_config'].includes(v.send_status ?? '');
+  const canSend = (code === 'email' || code === 'sms') && v.direction === 'out' && !sent && !['queued', 'sending', 'awaiting_config'].includes(v.send_status ?? '');
 
   return (
     <Modal
@@ -287,10 +287,10 @@ export function CorrespondenceForm({ id, defaults, onClose, onSaved }: { id?: nu
                 <span />
               </>
             )}
-            {code === 'email' && !status.smtp_configured && (
+            {code === 'email' && v.direction === 'out' && !sent && !status.smtp_configured && (
               <div className="span4"><Notice kind="warn">Serwer SMTP nie jest skonfigurowany (Ustawienia → Poczta SMTP). Wiadomość zostanie zapisana i trafi do kolejki „oczekuje na konfigurację”; nie zostanie wysłana, dopóki administrator nie uzupełni konfiguracji.</Notice></div>
             )}
-            {code === 'sms' && !status.sms_configured && (
+            {code === 'sms' && v.direction === 'out' && !sent && !status.sms_configured && (
               <div className="span4"><Notice kind="warn">Bramka SMS nie jest skonfigurowana (Ustawienia → Bramka SMS). SMS trafi do kolejki „oczekuje na konfigurację bramki”.</Notice></div>
             )}
             {v.send_error && <div className="span4"><Notice kind="error">Ostatni błąd wysyłki: {v.send_error}</Notice></div>}

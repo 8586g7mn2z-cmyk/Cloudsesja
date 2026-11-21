@@ -133,13 +133,13 @@ export function DataTable<T>(p: DataTableProps<T>) {
   const [quick, setQuick] = useState('');
   const [colFilters, setColFilters] = useState<Record<string, string>>({});
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
-  const [colsOpen, setColsOpen] = useState(false);
+  const [colsOpen, setColsOpen] = useState<DOMRect | null>(null);
   const [dropActive, setDropActive] = useState(false);
   const [scrollTop, setScrollTop] = useState(0);
   const [viewH, setViewH] = useState(600);
   const scrollRef = useRef<HTMLDivElement>(null);
   const colsRef = useRef<HTMLDivElement>(null);
-  useOutside(colsRef, () => setColsOpen(false));
+  useOutside(colsRef, () => setColsOpen(null));
 
   const allCols = p.columns;
   const visible = useMemo(
@@ -396,11 +396,11 @@ export function DataTable<T>(p: DataTableProps<T>) {
           <Filter size={14} />
         </button>
         <div ref={colsRef} style={{ position: 'relative' }}>
-          <button type="button" className="btn icon" title="Widoczne kolumny" onClick={() => setColsOpen(!colsOpen)}>
+          <button type="button" className="btn icon" title="Widoczne kolumny" onClick={(e) => setColsOpen(colsOpen ? null : e.currentTarget.getBoundingClientRect())}>
             <Columns3 size={14} />
           </button>
           {colsOpen && (
-            <div className="popover" style={{ right: 0, top: 30 }}>
+            <div className="popover" style={{ position: 'fixed', top: colsOpen.bottom + 4, right: Math.max(8, window.innerWidth - colsOpen.right) }}>
               <div className="xs muted" style={{ padding: '2px 4px 6px' }}>
                 Widoczne kolumny
               </div>

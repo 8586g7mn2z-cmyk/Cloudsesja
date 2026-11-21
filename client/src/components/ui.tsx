@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { X, AlertTriangle, Info, CheckCircle2, Calendar as CalendarIcon } from 'lucide-react';
 import { activeDict, useApp } from '../lib/store';
 
@@ -54,7 +55,7 @@ export function Modal({
       modalStack.splice(modalStack.indexOf(me), 1);
     };
   }, []);
-  return (
+  return createPortal(
     <div className="overlay" onMouseDown={onClose}>
       <form
         ref={ref}
@@ -63,6 +64,7 @@ export function Modal({
         onMouseDown={(e) => e.stopPropagation()}
         onSubmit={(e) => {
           e.preventDefault();
+          e.stopPropagation();
           onSubmit?.();
         }}
         onKeyDown={(e) => {
@@ -82,7 +84,8 @@ export function Modal({
         <div className="modal-body">{children}</div>
         {footer && <div className="modal-foot">{footer}</div>}
       </form>
-    </div>
+    </div>,
+    document.body,
   );
 }
 
