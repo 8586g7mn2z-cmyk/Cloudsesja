@@ -1,0 +1,273 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<title>DIAGNOS — panel CRM. Prospekt</title>
+<style>
+  @font-face { font-family: Plex; font-weight: 400; src: url('../../node_modules/@fontsource/ibm-plex-sans/files/ibm-plex-sans-latin-ext-400-normal.woff2') format('woff2'); unicode-range: U+0100-024F, U+2013-2014, U+201C-201E; }
+  @font-face { font-family: Plex; font-weight: 400; src: url('../../node_modules/@fontsource/ibm-plex-sans/files/ibm-plex-sans-latin-400-normal.woff2') format('woff2'); }
+  @font-face { font-family: Plex; font-weight: 600; src: url('../../node_modules/@fontsource/ibm-plex-sans/files/ibm-plex-sans-latin-ext-600-normal.woff2') format('woff2'); unicode-range: U+0100-024F, U+2013-2014, U+201C-201E; }
+  @font-face { font-family: Plex; font-weight: 600; src: url('../../node_modules/@fontsource/ibm-plex-sans/files/ibm-plex-sans-latin-600-normal.woff2') format('woff2'); }
+  @page { size: A4; margin: 0; }
+  :root { --navy: #1b2f5b; --navy-3: #3a5591; --tint: #e9edf4; --line: #c9d0dc; --text: #1c2433; --text-2: #5a6373; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body { font-family: Plex, sans-serif; color: var(--text); font-size: 9.1pt; line-height: 1.45; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .page { width: 210mm; height: 297mm; padding: 12mm 17mm 11mm; position: relative; page-break-after: always; overflow: hidden; display: flex; flex-direction: column; }
+  .page:last-child { page-break-after: auto; }
+  .run { display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--line); padding-bottom: 2.5mm; margin-bottom: 5mm; color: var(--text-2); font-size: 8pt; letter-spacing: 0.04em; }
+  .logo { display: flex; align-items: center; gap: 2.2mm; font-weight: 600; letter-spacing: 0.06em; color: var(--navy); font-size: 10pt; }
+  .logo i { display: block; width: 4.6mm; height: 4.6mm; border: 0.55mm solid var(--navy); border-left-width: 1.4mm; border-radius: 0 2.3mm 2.3mm 0; }
+  .foot { margin-top: auto; padding-top: 3mm; border-top: 1px solid var(--line); display: flex; justify-content: space-between; color: var(--text-2); font-size: 7.6pt; }
+  .kicker { color: var(--navy-3); font-weight: 600; font-size: 8pt; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 1.5mm; }
+  h1 { font-size: 25pt; line-height: 1.12; margin: 0 0 4mm; color: var(--navy); font-weight: 600; letter-spacing: -0.01em; }
+  h2 { font-size: 16pt; line-height: 1.15; margin: 0 0 2.5mm; color: var(--navy); font-weight: 600; }
+  h3 { font-size: 10pt; margin: 0 0 1mm; color: var(--navy); font-weight: 600; }
+  p { margin: 0 0 2.5mm; }
+  .lead { font-size: 10pt; line-height: 1.45; color: #2b3445; max-width: 150mm; }
+  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 1mm 8mm; margin: 2mm 0 4mm; }
+  .cols.three { grid-template-columns: 1fr 1fr 1fr; }
+  ul { margin: 0; padding: 0; list-style: none; }
+  li { padding-left: 4mm; position: relative; margin-bottom: 1mm; }
+  li::before { content: ''; position: absolute; left: 0; top: 2.1mm; width: 1.6mm; height: 1.6mm; background: var(--navy); }
+  figure { margin: 0; }
+  figure img { display: block; width: 100%; border: 1px solid var(--line); }
+  figure.main { width: 142mm; }
+  figure.crop img { aspect-ratio: 16 / 6.6; object-fit: cover; object-position: top; }
+  .cover figure.main { width: 100%; }
+  figcaption { font-size: 7.8pt; color: var(--text-2); margin-top: 1.4mm; }
+  .split { display: grid; grid-template-columns: 98mm 1fr; gap: 6mm; margin-top: 4mm; align-items: start; }
+  .side h3 { margin-top: 0; }
+  .side p { font-size: 8.8pt; }
+  .side .box { border-left: 0.8mm solid var(--navy); background: var(--tint); padding: 2mm 3mm; margin-bottom: 2.5mm; }
+  .side .box p:last-child { margin-bottom: 0; }
+  /* okładka */
+  .cover { padding: 0; }
+  .cover .band { background: var(--navy); color: #fff; padding: 17mm 17mm 12mm; }
+  .cover .band .logo { color: #fff; font-size: 12pt; margin-bottom: 20mm; }
+  .cover .band .logo i { border-color: #fff; }
+  .cover h1 { color: #fff; font-size: 31pt; margin-bottom: 4mm; }
+  .cover .sub { font-size: 12pt; color: #d5dcec; max-width: 140mm; line-height: 1.45; }
+  .cover .body { padding: 9mm 17mm 14mm; flex: 1; display: flex; flex-direction: column; }
+  .facts { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5mm; margin: 11mm 0 0; }
+  .facts div { border-top: 0.8mm solid var(--navy); padding-top: 2mm; }
+  .facts b { display: block; color: var(--navy); font-size: 9.6pt; margin-bottom: 0.8mm; }
+  .facts span { font-size: 8.6pt; color: var(--text-2); line-height: 1.4; display: block; }
+  table { border-collapse: collapse; width: 100%; font-size: 9pt; margin: 2mm 0 4mm; }
+  th, td { text-align: left; padding: 1.6mm 2mm; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--navy); font-weight: 600; background: var(--tint); }
+  td:first-child { width: 34mm; font-weight: 600; color: var(--navy); }
+</style>
+</head>
+<body>
+
+<!-- 1 -->
+<section class="page cover">
+  <div class="band">
+    <div class="logo"><i></i>DIAGNOS</div>
+    <h1>Panel CRM</h1>
+    <div class="sub">Kontrahenci, korespondencja, zadania, dokumenty i raporty w jednym miejscu, w przeglądarce. Opis działania i wyglądu systemu.</div>
+  </div>
+  <div class="body">
+    <figure>
+      <img src="zrzuty/01-moje-zadania-na-dzis.png" alt="">
+      <figcaption>Ekran startowy „Moje zadania na dziś”: plan dnia operatora, mini-kalendarz, szybkie notatki oraz zadania zaległe.</figcaption>
+    </figure>
+    <div class="facts">
+      <div><b>Pełna wiedza o kliencie</b><span>Dane, osoby, cała historia kontaktów, zadania, zamówienia, sprzedaż i dokumenty w jednej kartotece.</span></div>
+      <div><b>Praca zadaniowa</b><span>Kalendarz, zadania cykliczne i automatyczne, przypomnienia na ekranie, e‑mailem i SMS‑em.</span></div>
+      <div><b>Uporządkowane dokumenty</b><span>Segregatory, wersje, okres ważności, uprawnienia i historia zmian.</span></div>
+      <div><b>Raporty na żądanie</b><span>Aktywność, sprzedaż, zadania i czas pracy; wydruk, PDF, XLSX i wysyłka automatyczna.</span></div>
+    </div>
+    <div class="foot"><span>Prospekt funkcjonalny</span><span>listopad 2026</span></div>
+  </div>
+</section>
+
+<!-- 2 -->
+<section class="page">
+  <div class="run"><div class="logo"><i></i>DIAGNOS</div><span>PANEL CRM · KONTRAHENCI</span></div>
+  <div class="kicker">Rejestr kontrahentów</div>
+  <h2>Każdy klient odnaleziony w kilka sekund</h2>
+  <p class="lead">Rejestr gromadzi wszystkie firmy, z którymi pracujecie. Szukanie działa po nazwie, NIP-ie, telefonie, adresie e-mail i nazwisku osoby kontaktowej, a listę można dowolnie filtrować i grupować.</p>
+  <div class="cols">
+    <ul>
+      <li>Dane teleadresowe i rejestracyjne: wiele adresów, NIP, REGON, KRS, urząd skarbowy, z kontrolą poprawności NIP i ostrzeżeniem o duplikacie.</li>
+      <li>Typ, status, grupa i podgrupa, grupa cenowa, źródło kontaktu, prowadzący, limit kredytu. Wszystkie słowniki edytuje administrator.</li>
+      <li>Własne pola dodatkowe (tekst, liczba, data, lista, tak/nie), widoczne w kartotece, w filtrach i jako kolumny.</li>
+    </ul>
+    <ul>
+      <li>Panel grupowania w każdym rejestrze: jedna lub kilka kolumn naraz, z licznikami grup, np. miasto, a w nim status.</li>
+      <li>Filtry gotowe do codziennej pracy: „tylko kluczowi” oraz „bez kontaktu od…”.</li>
+      <li>Eksport do XLSX i CSV oraz wydruk dokładnie tego, co widać na ekranie.</li>
+    </ul>
+  </div>
+  <figure class="main">
+    <img src="zrzuty/03-rejestr-grupowanie-miasto-status.png" alt="">
+    <figcaption>Rejestr pogrupowany według miasta i statusu. Po prawej podgląd zaznaczonego kontrahenta z osobami kontaktowymi.</figcaption>
+  </figure>
+  <div class="split">
+    <figure>
+      <img src="zrzuty/04-kartoteka-szczegoly.png" alt="">
+      <figcaption>Kartoteka kontrahenta: dane podstawowe, pola dodatkowe i zadania w toku.</figcaption>
+    </figure>
+    <div class="side">
+      <h3>Kartoteka kontrahenta</h3>
+      <p>Jedno miejsce na wszystko, co dotyczy firmy. Zakładki: szczegóły, adresy, osoby, korespondencja, zadania, projekty, zamówienia, sprzedaż, załączniki, notatki, grupy, strona WWW i lokalizacja.</p>
+      <p>Liczniki przy zakładkach od razu pokazują, ile jest pozycji, a z nagłówka kartoteki jednym kliknięciem dodaje się korespondencję, zadanie lub dokument z szablonu.</p>
+    </div>
+  </div>
+  <div class="foot"><span>DIAGNOS · panel CRM</span><span>2</span></div>
+</section>
+
+<!-- 3 -->
+<section class="page">
+  <div class="run"><div class="logo"><i></i>DIAGNOS</div><span>PANEL CRM · KORESPONDENCJA</span></div>
+  <div class="kicker">Korespondencja</div>
+  <h2>Co, kiedy i z kim zostało ustalone</h2>
+  <p class="lead">Każdy kontakt z klientem zostaje w systemie: rozmowa telefoniczna, e-mail, SMS, spotkanie, notatka. Po czasie łatwo sprawdzić, kto z firmy rozmawiał, z kim po stronie klienta i co ustalono.</p>
+  <div class="cols">
+    <ul>
+      <li>Rodzaj, kierunek, data i godzina, temat ze słownika lub własny, automatycznie nadawany numer.</li>
+      <li>Stoper mierzy faktyczny czas trwania rozmowy od otwarcia formularza; czas można poprawić ręcznie.</li>
+      <li>Powiązanie z kontrahentem, osobą kontaktową, projektem i jego etapem oraz z kontrahentem powiązanym.</li>
+    </ul>
+    <ul>
+      <li>Treść i załączniki; pliki można pobrać z rejestru dokumentów albo zapisać do niego prosto z wiadomości.</li>
+      <li>E-mail i SMS wysyłane z formularza przez firmową pocztę i bramkę SMS; status wysyłki widoczny przy wiadomości.</li>
+      <li>Rejestr całej korespondencji oraz ten sam widok w kartotece kontrahenta i projektu.</li>
+    </ul>
+  </div>
+  <figure class="crop">
+    <img src="zrzuty/11-formularz-korespondencji.png" alt="">
+    <figcaption>Nowa korespondencja otwarta z kartoteki kontrahenta. W nagłówku okna biegnie stoper czasu rozmowy.</figcaption>
+  </figure>
+  <div class="split">
+    <figure>
+      <img src="zrzuty/06-kartoteka-korespondencja.png" alt="">
+      <figcaption>Historia korespondencji w kartotece kontrahenta, z treścią wybranej pozycji.</figcaption>
+    </figure>
+    <div class="side">
+      <div class="box">
+        <h3>Korespondencja seryjna</h3>
+        <p>Jedna wiadomość do grupy kontrahentów albo do wyniku filtra. Pola takie jak nazwa firmy czy imię osoby podstawiają się same. Przed wysyłką jest podgląd, po niej status każdego odbiorcy, a u każdego kontrahenta powstaje wpis w historii.</p>
+      </div>
+      <div class="box">
+        <h3>Korespondencja wewnętrzna</h3>
+        <p>Wiadomości między operatorami z terminem doręczenia: adresat zobaczy je dopiero o wskazanej porze.</p>
+      </div>
+    </div>
+  </div>
+  <div class="foot"><span>DIAGNOS · panel CRM</span><span>3</span></div>
+</section>
+
+<!-- 4 -->
+<section class="page">
+  <div class="run"><div class="logo"><i></i>DIAGNOS</div><span>PANEL CRM · ZADANIA I KALENDARZ</span></div>
+  <div class="kicker">Zadania i kalendarz</div>
+  <h2>Plan pracy, o którym system sam przypomina</h2>
+  <p class="lead">Zadania porządkują dzień każdego operatora i dają kierownikowi bieżący obraz pracy zespołu. Po zalogowaniu każdy widzi swój plan na dziś i zadania zaległe.</p>
+  <div class="cols">
+    <ul>
+      <li>Zadanie ma termin, wykonawcę lub kilku wykonawców, zlecającego, priorytet, status i stopień wykonania w procentach.</li>
+      <li>Powiązanie z kontrahentem, osobą, korespondencją lub projektem.</li>
+      <li>Kalendarz dzienny i tygodniowy z siatką 5–60 minut; zadanie przeciąga się myszą na nowy termin.</li>
+      <li>Przypomnienia z wybranym wyprzedzeniem: komunikat na ekranie wymagający potwierdzenia lub odłożenia, e‑mail, SMS.</li>
+    </ul>
+    <ul>
+      <li>Zadania cykliczne: codziennie, w wybrane dni tygodnia, co miesiąc lub co kilka dni, z datą końca.</li>
+      <li>Zadania automatyczne według reguł ustawianych przez administratora, np. kontakt z nowym kontrahentem po trzech dniach.</li>
+      <li>Ewidencja czasu: godziny z zadań i rozmów sumują się dla operatora, kontrahenta i projektu.</li>
+      <li>Kierownik widzi zadania swoich pracowników i stan ich wykonania.</li>
+    </ul>
+  </div>
+  <figure class="main">
+    <img src="zrzuty/16-kalendarz-tydzien.png" alt="">
+    <figcaption>Kalendarz tygodniowy. Kolor oznacza stan zadania, pasek u dołu pozycji stopień wykonania, czerwona linia bieżącą godzinę.</figcaption>
+  </figure>
+  <div class="split">
+    <figure>
+      <img src="zrzuty/12-formularz-zadania.png" alt="">
+      <figcaption>Formularz zadania: termin, wykonawcy, powiązania, postęp i przypomnienie.</figcaption>
+    </figure>
+    <div class="side">
+      <h3>Projekty, zamówienia, sprzedaż</h3>
+      <p>Projekty z etapami i opiekunem mają własną kartotekę z korespondencją, zadaniami i załącznikami.</p>
+      <p>Zamówienia i dokumenty sprzedaży powstają z pozycji kartoteki towarowej; wartości netto i brutto liczą się same. Historia zamówień i sprzedaży jest widoczna w kartotece kontrahenta.</p>
+    </div>
+  </div>
+  <div class="foot"><span>DIAGNOS · panel CRM</span><span>4</span></div>
+</section>
+
+<!-- 5 -->
+<section class="page">
+  <div class="run"><div class="logo"><i></i>DIAGNOS</div><span>PANEL CRM · DOKUMENTY I RAPORTY</span></div>
+  <div class="kicker">Dokumenty</div>
+  <h2>Wirtualna szafa z kontrolą dostępu</h2>
+  <div class="cols">
+    <ul>
+      <li>Segregatory i typy dokumentów, pliki w dowolnym formacie, automatyczny numer, podgląd PDF i obrazów w przeglądarce.</li>
+      <li>Wersje: nowa edycja nie kasuje poprzedniej, każda ma autora i datę.</li>
+      <li>Okres ważności: po terminie dokument sam przechodzi do archiwalnych.</li>
+    </ul>
+    <ul>
+      <li>Uprawnienia do segregatora lub pojedynczego dokumentu dla działu albo osoby (wgląd lub edycja), sprawdzane także przy pobieraniu pliku.</li>
+      <li>Rejestr zmian: kto i kiedy dodał, zmienił, pobrał.</li>
+      <li>Szablony oferty, zamówienia i faktury pro forma: gotowy PDF w jednolitej szacie firmy, zapisany przy kontrahencie.</li>
+    </ul>
+  </div>
+  <figure class="main">
+    <img src="zrzuty/24-rejestr-dokumentow.png" alt="">
+    <figcaption>Rejestr dokumentów: segregatory po lewej, lista w środku, dane, wersje i rejestr zmian wybranego dokumentu po prawej.</figcaption>
+  </figure>
+  <div class="kicker" style="margin-top:4mm">Raporty</div>
+  <div class="split" style="margin-top:1mm">
+    <figure>
+      <img src="zrzuty/30-raport-aktywnosc-operatora.png" alt="">
+      <figcaption>Raport aktywności operatora: korespondencja według rodzaju i kierunku, z czasem i wykresem.</figcaption>
+    </figure>
+    <div class="side">
+      <ul>
+        <li><b>Brak aktywności:</b> klienci bez kontaktu od wskazanej liczby dni.</li>
+        <li><b>Skuteczność handlowców:</b> sprzedaż, liczba transakcji i klientów.</li>
+        <li><b>Statystyka zadań:</b> wykonane, w toku, przeterminowane.</li>
+        <li><b>Aktywność operatora</b> i <b>czas pracy</b> według osoby, kontrahenta i projektu.</li>
+      </ul>
+      <p style="margin-top:2mm">Każdy raport można wydrukować, zapisać do PDF lub XLSX, a także zlecić automatyczną wysyłkę e‑mailem, np. ostatniego dnia miesiąca.</p>
+    </div>
+  </div>
+  <div class="foot"><span>DIAGNOS · panel CRM</span><span>5</span></div>
+</section>
+
+<!-- 6 -->
+<section class="page">
+  <div class="run"><div class="logo"><i></i>DIAGNOS</div><span>PANEL CRM · WDROŻENIE</span></div>
+  <div class="kicker">Samouczek</div>
+  <h2>Nowy pracownik zaczyna pracę bez szkolenia</h2>
+  <p class="lead">Wbudowany samouczek prowadzi krok po kroku po najważniejszych ekranach, podświetlając omawiany element i wyjaśniając, do czego służy. Przy pierwszym logowaniu panel sam go proponuje, a później jest dostępny pod przyciskiem w górnym pasku.</p>
+  <figure style="margin-top:2mm; width:150mm">
+    <img src="zrzuty/44-samouczek-grupowanie.png" alt="">
+    <figcaption>Samouczek, krok 6 z 17: podświetlony panel grupowania w rejestrze kontrahentów.</figcaption>
+  </figure>
+  <div class="cols" style="margin-top:4mm">
+    <div>
+      <h3>Przeniesienie danych</h3>
+      <p>Kontrahentów, osoby kontaktowe, kartotekę towarową i historię sprzedaży wczytuje się z plików Excel lub CSV: wskazanie kolumn, podgląd, raport z importu z przyczyną każdego odrzuconego wiersza. Ponowny import aktualizuje istniejące rekordy zamiast je dublować.</p>
+      <p>Bezpośrednie połączenie z programem enova365 jest przewidziane jako kolejny etap; import jest już na nie przygotowany.</p>
+    </div>
+    <div>
+      <h3>Role i bezpieczeństwo</h3>
+      <p>Trzy role: administrator, kierownik i handlowiec, oraz działy używane w uprawnieniach do dokumentów. Hasła nie są przechowywane jawnym tekstem, pierwsze logowanie wymusza zmianę hasła, a sesja wygasa po okresie bezczynności.</p>
+      <p>Dane i pliki pozostają na serwerze firmy; do pakietu należy skrypt kopii zapasowej.</p>
+    </div>
+  </div>
+  <table>
+    <tr><th colspan="2">Uruchomienie u klienta</th></tr>
+    <tr><td>Środowisko</td><td>Jeden serwer lub komputer w sieci firmy (Docker albo Node.js 22). Operatorzy pracują w przeglądarce, na monitorze od 1366 px szerokości; nic nie instaluje się na stanowiskach.</td></tr>
+    <tr><td>Poczta e-mail</td><td>Dane firmowego serwera pocztowego (SMTP) wpisuje administrator w ustawieniach. Od tej chwili działają wysyłka z korespondencji, korespondencja seryjna, przypomnienia e-mail i raporty automatyczne.</td></tr>
+    <tr><td>SMS</td><td>Wymaga konta u operatora bramki SMS; dane dostępowe wpisuje się w ustawieniach.</td></tr>
+    <tr><td>Dane firmy</td><td>Logo, adres i numer rachunku do szablonów oferty, zamówienia i faktury pro forma.</td></tr>
+  </table>
+  <div class="foot"><span>DIAGNOS · panel CRM</span><span>6</span></div>
+</section>
+</body>
+</html>

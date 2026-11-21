@@ -353,7 +353,7 @@ export function DataTable<T>(p: DataTableProps<T>) {
       .m{color:#666;margin-bottom:8px}table{border-collapse:collapse;width:100%}th{background:#e9edf4;border-bottom:1px solid #999;padding:3px 4px}
       td{border-bottom:1px solid #ddd;padding:2px 4px}tr.g td{background:#f1f3f7;font-weight:normal}tr.f td{font-weight:bold;border-top:1px solid #666}
       @page{size:landscape;margin:12mm}</style></head><body><h1>${esc(p.title)}</h1>
-      <div class="m">DIAGNOS CRM · rekordów: ${sorted.length}${groupBy.length ? ' · grupowanie: ' + groupBy.map((k) => esc(colByKey.get(k)?.label ?? k)).join(' → ') : ''} · wydruk ${new Date().toLocaleString('pl-PL')}</div>
+      <div class="m">DIAGNOS · rekordów: ${sorted.length}${groupBy.length ? ' · grupowanie: ' + groupBy.map((k) => esc(colByKey.get(k)?.label ?? k)).join(' → ') : ''} · wydruk ${new Date().toLocaleString('pl-PL')}</div>
       <table><thead><tr>${head}</tr></thead><tbody>${body}</tbody><tfoot>${foot}</tfoot></table>
       <script>window.onload=function(){window.print()}</script></body></html>`);
     w.document.close();

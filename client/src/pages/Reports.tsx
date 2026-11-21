@@ -189,7 +189,7 @@ export function ReportsPage() {
                     <BarChart labels={r.chart.labels} series={r.chart.series} unit={r.chart.unit} />
                   </div>
                 )}
-                <div className="xs muted mt8">DIAGNOS CRM · wygenerowano {fmtDate(today())} {new Date().toTimeString().slice(0, 5)}</div>
+                <div className="xs muted mt8">DIAGNOS · wygenerowano {fmtDate(today())} {new Date().toTimeString().slice(0, 5)}</div>
               </div>
             )}
           </div>

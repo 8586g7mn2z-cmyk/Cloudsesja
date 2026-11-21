@@ -25,7 +25,7 @@ export function LoginPage() {
   return (
     <div className="login-wrap">
       <form className="login-box" onSubmit={submit}>
-        <h1>DIAGNOS CRM</h1>
+        <h1>DIAGNOS</h1>
         <p className="muted small">Zaloguj się kontem operatora.</p>
         <div className="col mt12">
           <label className="small muted" htmlFor="login">Login</label>

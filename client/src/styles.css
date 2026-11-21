@@ -328,3 +328,23 @@ table.grid input.input, table.grid select.select { height: 24px; }
   .print-only { display: block !important; }
 }
 .print-only { display: none; }
+
+/* ---------- Samouczek ---------- */
+.tour { position: fixed; inset: 0; z-index: 300; }
+.tour-shade { position: absolute; inset: 0; background: rgba(15, 26, 51, 0.55); }
+.tour-hole { position: absolute; border-radius: 3px; box-shadow: 0 0 0 9999px rgba(15, 26, 51, 0.55), 0 0 0 2px #fff, 0 0 0 4px var(--navy-3); transition: top 0.18s, left 0.18s, width 0.18s, height 0.18s; }
+.tour-card { position: absolute; background: #fff; border: 1px solid var(--line-strong); border-top: 3px solid var(--navy); border-radius: var(--radius); box-shadow: 0 10px 30px rgba(15, 26, 51, 0.3); padding: 12px 14px 12px; transition: top 0.18s, left 0.18s; }
+.tour-head { display: flex; align-items: center; gap: 6px; color: var(--navy-3); font-size: var(--fs-s); }
+.tour-step { flex: 1; font-weight: 600; letter-spacing: 0.02em; }
+.tour-x { background: none; border: 0; cursor: pointer; color: var(--text-2); padding: 2px; display: flex; }
+.tour-x:hover { color: var(--text); }
+.tour-card h3 { font-size: 15px; margin: 8px 0 6px; color: var(--navy); }
+.tour-card p { margin: 0; line-height: 1.5; color: var(--text); }
+.tour-progress { height: 3px; background: var(--navy-tint); margin: 12px 0 10px; border-radius: 2px; overflow: hidden; }
+.tour-progress span { display: block; height: 100%; background: var(--navy); transition: width 0.18s; }
+.tour-foot { display: flex; align-items: center; gap: 6px; }
+.tour-foot .grow { flex: 1; }
+.tour-invite { position: fixed; left: 10px; bottom: 10px; width: 216px; z-index: 40; background: #fff; border: 1px solid var(--line-strong); border-left: 3px solid var(--navy); border-radius: var(--radius); box-shadow: 0 4px 14px rgba(20, 30, 50, 0.16); padding: 8px 10px; font-size: var(--fs-s); }
+.tour-invite .row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.tour-invite p { margin: 6px 0 8px; color: var(--text-2); line-height: 1.4; }
+@media print { .tour, .tour-invite { display: none; } }

@@ -1,16 +1,16 @@
 // Zrzuty ekranów gotowej aplikacji do docs/zrzuty (wymaga uruchomionego serwera z danymi przykładowymi).
-// Użycie: BASE=http://localhost:3100 ADMIN_PW=... DEMO_PW=... node scripts/zrzuty.cjs
+// Użycie: BASE=http://localhost:3100 ADMIN_PW=... DEMO_PW=... [OUT=katalog] [SCALE=2] node scripts/zrzuty.cjs
 const { chromium } = require('playwright');
 const path = require('node:path');
 const fs = require('node:fs');
 
 const BASE = process.env.BASE || 'http://localhost:3100';
-const OUT = path.resolve(__dirname, '../docs/zrzuty');
+const OUT = path.resolve(process.env.OUT || path.join(__dirname, '../docs/zrzuty'));
 fs.mkdirSync(OUT, { recursive: true });
 
 (async () => {
   const b = await chromium.launch(process.env.PW_CHROMIUM ? { executablePath: process.env.PW_CHROMIUM } : {});
-  const ctx = await b.newContext({ viewport: { width: 1440, height: 900 }, locale: 'pl-PL', timezoneId: 'Europe/Warsaw' });
+  const ctx = await b.newContext({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: Number(process.env.SCALE || 1), locale: 'pl-PL', timezoneId: 'Europe/Warsaw' });
   const p = await ctx.newPage();
   const errors = [];
   p.on('pageerror', (e) => errors.push(`${p.url()} ${e.message}`));
@@ -41,6 +41,11 @@ fs.mkdirSync(OUT, { recursive: true });
     await shot('01b-przypomnienie');
     await p.locator('.reminder-modal button:has-text("Potwierdzam")').first().click();
     await p.waitForTimeout(300);
+  }
+  // zaproszenie do samouczka przy pierwszym logowaniu
+  if (await p.locator('.tour-invite').count()) {
+    await shot('01c-zaproszenie-do-samouczka');
+    await p.locator('.tour-invite button:has-text("Nie teraz")').click();
   }
   await shot('01-moje-zadania-na-dzis');
 
@@ -128,6 +133,18 @@ fs.mkdirSync(OUT, { recursive: true });
   await shot('33-import');
   await go('/kolejka');
   await shot('34-kolejka-wysylki');
+
+  // samouczek: krok powitalny i krok z podświetlonym panelem grupowania
+  await go('/');
+  await p.getByRole('button', { name: 'Samouczek' }).click();
+  await shot('43-samouczek-start');
+  for (let i = 0; i < 5; i++) await p.getByRole('button', { name: 'Dalej' }).click();
+  await p.waitForTimeout(600);
+  await shot('44-samouczek-grupowanie');
+  for (let i = 0; i < 3; i++) await p.getByRole('button', { name: 'Dalej' }).click();
+  await p.waitForTimeout(600);
+  await shot('45-samouczek-korespondencja');
+  await p.keyboard.press('Escape');
 
   // administrator
   await p.getByRole('button', { name: 'Wyloguj' }).click();

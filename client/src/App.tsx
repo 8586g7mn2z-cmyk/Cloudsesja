@@ -2,8 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { BrowserRouter, NavLink, Navigate, Route, Routes, useNavigate } from 'react-router-dom';
 import {
   CalendarDays, CalendarClock, Building2, MessagesSquare, Mails, Inbox, ListChecks, FolderKanban, Package, ShoppingCart, Receipt, FileText,
-  FileStack, BarChart3, Upload, Settings, LogOut, Bell, KeyRound, Search, Repeat, Send,
-} from 'lucide-react';
+  FileStack, BarChart3, Upload, Settings, LogOut, Bell, KeyRound, Search, Repeat, Send, GraduationCap } from 'lucide-react';
+import { Tour, TourInvite, markTourSeen, tourSeen } from './components/Tour';
 import { AppProvider, useApp } from './lib/store';
 import { get, post, setUnauthorizedHandler } from './lib/api';
 import { fmtDateTime, longDate, today } from './lib/format';
@@ -220,6 +220,13 @@ function Layout() {
   const nav = useNavigate();
   const [counts, setCounts] = useState({ messages: 0, outbox: 0 });
   const [pw, setPw] = useState(false);
+  const { isManager } = useApp();
+  const [tour, setTour] = useState(false);
+  const [invite, setInvite] = useState(() => !!user && !tourSeen(user.id));
+  const closeInvite = () => {
+    if (user) markTourSeen(user.id);
+    setInvite(false);
+  };
   const logout = async () => {
     await post('/api/auth/logout').catch(() => undefined);
     setUser(null);
@@ -229,7 +236,7 @@ function Layout() {
     <div className="app">
       <header className="topbar">
         <div className="brand">
-          <span className="brand-mark" /> DIAGNOS CRM
+          <span className="brand-mark" /> DIAGNOS
         </div>
         <GlobalSearch />
         <div className="spacer" />
@@ -243,6 +250,9 @@ function Layout() {
             <Send size={15} /> <span className="badge-count">{counts.outbox}</span>
           </button>
         )}
+        <button className="tb-btn" title="Samouczek: przewodnik po panelu krok po kroku" onClick={() => (closeInvite(), setTour(true))}>
+          <GraduationCap size={15} /> Samouczek
+        </button>
         <button className="tb-btn" title="Zmień hasło" onClick={() => setPw(true)}>
           <KeyRound size={15} /> {user?.name}
         </button>
@@ -289,6 +299,8 @@ function Layout() {
       </main>
       <Notifications onCount={setCounts} />
       {pw && <ChangePasswordDialog onClose={() => setPw(false)} />}
+      {tour && <Tour isManager={isManager} onClose={() => setTour(false)} />}
+      {invite && !tour && <TourInvite onStart={() => (closeInvite(), setTour(true))} onDismiss={closeInvite} />}
     </div>
   );
 }

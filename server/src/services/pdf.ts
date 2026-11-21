@@ -229,7 +229,7 @@ export async function reportPdf(ctx: Ctx, r: ReportResult): Promise<Buffer> {
   if (r.rows.length) drawTable(doc, r.columns, r.rows, r.totals, { header: hdr });
   else doc.font('main').fontSize(9).fillColor(GREY).text('Brak danych dla wybranych parametrów.');
   if (r.chart && r.rows.length) drawChart(doc, r.chart);
-  return finish(doc, `${company(ctx).name || 'DIAGNOS'} · wygenerowano ${fmtDatePl(nowIso())} ${nowIso().slice(11, 16)} · DIAGNOS CRM`);
+  return finish(doc, `${company(ctx).name || 'DIAGNOS'} · wygenerowano ${fmtDatePl(nowIso())} ${nowIso().slice(11, 16)}`);
 }
 
 export interface DocItem {
