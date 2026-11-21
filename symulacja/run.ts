@@ -133,7 +133,7 @@ function fireReminder(r: MRem) {
 // ---------- Kroki scenariusza: przygotowanie firmy ----------
 async function bootstrap() {
   process.env.DIAGNOS_ADMIN_PASSWORD = ADMIN_START_PW;
-  const config = loadConfig({ dataDir, scheduler: false, clientDir: path.resolve('dist/client') });
+  const config = loadConfig({ dataDir, scheduler: false, clientDir: path.resolve(process.env.DIAGNOS_CLIENT_DIR ?? 'dist/client') });
   ctx = { db: openDb(config), config };
   setNow(simNow);
   ensureAdmin(ctx);
@@ -1319,7 +1319,7 @@ async function main() {
   await finalChecks(START, lastDate);
 
   let ui: Awaited<ReturnType<typeof runUi>> | null = null;
-  if (WITH_UI && fs.existsSync(path.resolve('dist/client/index.html'))) {
+  if (WITH_UI && fs.existsSync(path.join(ctx.config.clientDir, 'index.html'))) {
     await app.listen({ port: 0, host: '127.0.0.1' });
     const port = (app.server.address() as any).port;
     const sample = [...M.contractors.values()].find((c) => c.active && c.contacts.length > 0 && [...M.corr.values()].some((k) => k.contractorId === c.id && !k.deleted))!;

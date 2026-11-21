@@ -120,6 +120,22 @@ npm run build && npm run test:e2e   # test przeglądarkowy głównej ścieżki (
 
 Test wysyłki e-mail uruchamia w trakcie testu lokalny serwer SMTP, więc nie wymaga dostępu do sieci. Gdy Chromium jest zainstalowany poza Playwrightem, wskaż go zmienną `PW_CHROMIUM=/ścieżka/do/chromium`.
 
+### Symulacja pracy firmy
+
+```
+npm run build && npm run symulacja
+```
+
+Symulacja uruchamia prawdziwy serwer na pustej bazie i przez miesiąc „czasu firmy" wykonuje pracę siedmiu operatorów, porównując każdy wynik z niezależną księgą kontrolną (rejestry, przypomnienia, wiadomości, e-maile, SMS-y, raporty, uprawnienia, spójność bazy), a na koniec przegląda każdy ekran w przeglądarce. Raport trafia do `symulacja/wyniki/<data>/raport.md`. Opis i parametry: [docs/SYMULACJA.md](docs/SYMULACJA.md).
+
+## Role i uprawnienia
+
+- **Administrator:** wszystko, w tym operatorzy, słowniki, pola dodatkowe, reguły, konfiguracja poczty i SMS, usuwanie dokumentów.
+- **Kierownik:** widzi zadania i raporty swojego zespołu; usuwa kontrahentów, projekty, zamówienia i sprzedaż; zmienia kartotekę towarową, szablony i segregatory; importuje dane; zarządza kolejką wysyłki.
+- **Handlowiec:** pracuje na wspólnej bazie kontrahentów; edytuje i wysyła własną korespondencję, własne zamówienia i ręcznie wprowadzoną własną sprzedaż; widzi własne zadania oraz zadania przypisane do kontrahentów i projektów.
+
+Zadanie bez kontrahenta i projektu jest prywatne: widzą je zlecający, wykonawcy i ich przełożeni.
+
 ## Architektura
 
 - `server/src` — TypeScript, Fastify (REST API pod `/api`), `node:sqlite`, nodemailer, pdfkit (PDF z czcionką DejaVu Sans dla polskich znaków), exceljs.

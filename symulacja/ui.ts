@@ -69,6 +69,7 @@ export async function runUi(o: UiOptions) {
         continue;
       }
 
+      try {
       for (const [url, title, counter] of SCREENS) {
         where = `${user.role} ${url}`;
         const before = problems.length;
@@ -135,7 +136,13 @@ export async function runUi(o: UiOptions) {
         await settle();
         const sel = page.locator('select', { hasText: 'grupuj według' }).first();
         if (await sel.count()) {
-          await sel.selectOption({ label: 'Miasto' });
+          // rejestr kontrahentów może mieć już zapamiętane grupowanie po mieście
+          if (!/ilość:\s*\d+/.test(await page.locator('body').innerText())) {
+            await sel.selectOption({ label: 'Miasto' }).catch(() => undefined);
+            await settle();
+          }
+          // tabela renderuje tylko widoczne wiersze, więc do zliczenia grup zwijamy je wszystkie
+          await page.getByRole('button', { name: 'Zwiń wszystko' }).click().catch(() => undefined);
           await settle();
           const text = await page.locator('body').innerText();
           const groups = [...text.matchAll(/ilość:\s*(\d+)/g)].map((m) => Number(m[1]));
@@ -171,6 +178,9 @@ export async function runUi(o: UiOptions) {
         const f = path.join(dir, 'przypomnienie.png');
         await page.screenshot({ path: f });
         shots.push(f);
+      }
+      } catch (e: any) {
+        C.check('Interfejs', 'etap przeglądarkowy przebiega bez przerwania', false, `${where}: ${String(e?.message ?? e).split('\n')[0]}`);
       }
       await context.close();
     }
