@@ -111,11 +111,11 @@ export const saleColumns: Column<any>[] = [
 ];
 
 export const documentColumns: Column<any>[] = [
-  { key: 'number', label: 'Nr', width: 160 },
+  { key: 'number', label: 'Nr', width: 180 },
   { key: 'published_at', label: 'Data publikacji', type: 'date', width: 105 },
   { key: 'name', label: 'Nazwa dokumentu', width: 260 },
   { key: 'ext', label: 'Roz.', width: 55, filter: 'select' },
-  { key: 'size', label: 'Rozmiar', type: 'number', width: 90, sum: true, value: (r) => Math.round((r.size / 1024) * 100) / 100, render: (r) => <span className="v" style={{ textAlign: 'right' }}>{(r.size / 1024).toLocaleString('pl-PL', { maximumFractionDigits: 2 })} kB</span> },
+  { key: 'size', label: 'Rozmiar [kB]', type: 'number', width: 100, sum: true, value: (r) => Math.round((r.size / 1024) * 100) / 100, render: (r) => <span className="v" style={{ textAlign: 'right' }}>{(r.size / 1024).toLocaleString('pl-PL', { maximumFractionDigits: 2 })} kB</span> },
   { key: 'folder_name', label: 'Segregator', width: 150, filter: 'select' },
   { key: 'type_name', label: 'Typ', width: 110, filter: 'select' },
   { key: 'current_version', label: 'Edycja', type: 'int', width: 60 },

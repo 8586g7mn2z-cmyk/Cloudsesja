@@ -219,13 +219,22 @@ function setStatus(ctx: Ctx, id: number, status: OutboxStatus, error: string | n
 }
 
 const MAX_ATTEMPTS = 3;
-let processing = false;
+let current: Promise<number> | null = null;
 
-/** Przetwarza kolejkę: wysyła oczekujące wiadomości. Zwraca liczbę przetworzonych pozycji. */
+/** Przetwarza kolejkę: wysyła oczekujące wiadomości. Zwraca liczbę przetworzonych pozycji.
+ *  Gdy przetwarzanie już trwa, czeka na jego koniec i przetwarza ponownie (nowe pozycje). */
 export async function processOutbox(ctx: Ctx, limit = 50): Promise<number> {
-  if (processing) return 0;
-  processing = true;
+  while (current) await current.catch(() => 0);
+  current = runOutbox(ctx, limit);
   try {
+    return await current;
+  } finally {
+    current = null;
+  }
+}
+
+async function runOutbox(ctx: Ctx, limit: number): Promise<number> {
+  {
     const now = nowIso();
     // Wiadomości czekające na konfigurację wracają do kolejki, gdy kanał zostanie skonfigurowany.
     for (const ch of ['email', 'sms'] as const) {
@@ -265,8 +274,6 @@ export async function processOutbox(ctx: Ctx, limit = 50): Promise<number> {
       n++;
     }
     return n;
-  } finally {
-    processing = false;
   }
 }
 

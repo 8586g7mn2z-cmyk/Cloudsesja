@@ -268,7 +268,7 @@ function activity(ctx: Ctx, u: User, p: ReportParams): ReportResult {
       const out = counts.find((c) => c.kind_id === k.id && c.direction === 'out');
       const inn = counts.find((c) => c.kind_id === k.id && c.direction === 'in');
       const sec = (out?.sec ?? 0) + (inn?.sec ?? 0);
-      return { kind: k.name, out: out?.n ?? 0, in: inn?.n ?? 0, total: (out?.n ?? 0) + (inn?.n ?? 0), hours: round2(sec / 3600) };
+      return { kind: k.name, out: out?.n ?? 0, in: inn?.n ?? 0, total: (out?.n ?? 0) + (inn?.n ?? 0), hours: round2(sec / 3600), sec };
     })
     .filter((r) => r.total > 0);
   return {
@@ -287,7 +287,7 @@ function activity(ctx: Ctx, u: User, p: ReportParams): ReportResult {
       out: rows.reduce((s, r) => s + r.out, 0),
       in: rows.reduce((s, r) => s + r.in, 0),
       total: rows.reduce((s, r) => s + r.total, 0),
-      hours: round2(rows.reduce((s, r) => s + r.hours, 0)),
+      hours: round2(rows.reduce((s, r) => s + r.sec, 0) / 3600),
     },
     chart: { labels: rows.map((r) => r.kind), series: [{ name: 'Razem', values: rows.map((r) => r.total) }] },
   };
@@ -352,8 +352,8 @@ function timeReport(ctx: Ctx, u: User, p: ReportParams): ReportResult {
     rows,
     totals: {
       name: 'Razem',
-      corr_h: round2(rows.reduce((s, r) => s + r.corr_h, 0)),
-      tasks_h: round2(rows.reduce((s, r) => s + r.tasks_h, 0)),
+      corr_h: round2([...map.values()].reduce((s, v) => s + v.corr, 0) / 60),
+      tasks_h: round2([...map.values()].reduce((s, v) => s + v.tasks, 0) / 60),
       total_h: round2(total / 60),
       share: total ? 100 : 0,
     },

@@ -167,8 +167,9 @@ export function CalendarGrid({
                   >
                     <div className="t ellipsis">
                       {t.recurring ? <Repeat size={10} /> : null} {t.is_group ? <Users size={10} /> : null} {fmtTime(t.start_at)}–{fmtTime(t.end_at)} {t.contractor_short || t.contractor_name ? <b>{t.contractor_short || t.contractor_name}</b> : null}
+                      {h < 30 && <span style={{ fontWeight: 400 }}> · {t.title}</span>}
                     </div>
-                    <div className="ellipsis">{t.title}</div>
+                    {h >= 30 && <div className="ellipsis">{t.title}</div>}
                     {h > 40 && t.description && <div className="ellipsis muted">{t.description}</div>}
                     {h > 52 && t.principal_name && <div className="ellipsis muted">Zlecający: {t.principal_name}</div>}
                     <div className="prog" style={{ width: `${t.progress}%` }} />

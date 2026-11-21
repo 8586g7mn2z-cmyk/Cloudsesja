@@ -1,13 +1,9 @@
-// Buduje backend do jednego pliku dist/server/index.js (zależności z node_modules pozostają zewnętrzne).
+// Buduje backend do plików dist/server/*.js (zależności z node_modules pozostają zewnętrzne).
 import { build } from 'esbuild';
-await build({
-  entryPoints: ['server/src/index.ts'],
-  bundle: true,
-  platform: 'node',
-  format: 'esm',
-  target: 'node22',
-  outfile: 'dist/server/index.js',
-  packages: 'external',
-  sourcemap: true,
-  logLevel: 'info',
-});
+for (const [entry, out] of [
+  ['server/src/index.ts', 'dist/server/index.js'],
+  ['server/src/seed.ts', 'dist/server/seed.js'],
+]) {
+  await build({ entryPoints: [entry], bundle: true, platform: 'node', format: 'esm', target: 'node22', outfile: out, packages: 'external', sourcemap: true, logLevel: 'warning' });
+}
+console.log('Zbudowano backend: dist/server/index.js, dist/server/seed.js');
